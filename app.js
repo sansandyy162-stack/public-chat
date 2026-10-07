@@ -2758,9 +2758,9 @@ async function uploadPastedImage(
     );
 
   const path =
-    "messages/" +
     currentRoomId +
     "/" +
+    "message-" +
     crypto.randomUUID() +
     "." +
     extension;
