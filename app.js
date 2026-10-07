@@ -194,6 +194,11 @@ const logoutButton =
     "logoutButton"
   );
 
+const editNameButton =
+  document.getElementById(
+    "editNameButton"
+  );
+
 const userList =
   document.getElementById(
     "userList"
@@ -864,6 +869,107 @@ async function loadMyProfile() {
     data;
 
   return true;
+}
+
+
+async function editDisplayName() {
+
+  if (
+    !currentUser ||
+    !currentProfile
+  ) {
+    return;
+  }
+
+  const enteredName =
+    window.prompt(
+      "Masukkan nama tampilan baru",
+      currentProfile.name || ""
+    );
+
+  if (
+    enteredName === null
+  ) {
+    return;
+  }
+
+  const name =
+    enteredName
+      .trim()
+      .replace(
+        /\s+/g,
+        " "
+      );
+
+  if (
+    name.length < 2 ||
+    name.length > 30
+  ) {
+
+    alert(
+      "Nama harus terdiri dari 2 sampai 30 karakter."
+    );
+
+    return;
+  }
+
+  if (
+    name === currentProfile.name
+  ) {
+    return;
+  }
+
+  editNameButton.disabled =
+    true;
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .from(
+          "profiles"
+        )
+        .update({
+          name
+        })
+        .eq(
+          "id",
+          currentUser.id
+        )
+        .select()
+        .single();
+
+    if (
+      error
+    ) {
+      throw error;
+    }
+
+    currentProfile =
+      data;
+
+    myName.textContent =
+      data.name;
+
+  } catch (error) {
+
+    console.error(
+      "Update name:",
+      error
+    );
+
+    alert(
+      "Nama gagal diubah. Coba lagi."
+    );
+
+  } finally {
+
+    editNameButton.disabled =
+      false;
+  }
 }
 
 
@@ -5592,6 +5698,13 @@ logoutButton
   .addEventListener(
     "click",
     logout
+  );
+
+
+editNameButton
+  .addEventListener(
+    "click",
+    editDisplayName
   );
 
 
