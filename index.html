@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#075e54"
+  >
+
+  <title>Public Chat</title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+</head>
+
+<body>
+
+  <!-- =========================
+       LOGIN
+  ========================== -->
+
+  <div
+    id="loginScreen"
+    class="login-screen"
+  >
+
+    <div class="login-box">
+
+      <div class="login-icon">
+        💬
+      </div>
+
+      <h1>Public Chat</h1>
+
+      <p>
+        Masukkan nama kamu untuk mulai ngobrol.
+      </p>
+
+      <input
+        type="text"
+        id="nameInput"
+        placeholder="Nama kamu"
+        maxlength="30"
+        autocomplete="off"
+      >
+
+      <button
+        id="loginButton"
+        type="button"
+      >
+        Masuk Chat
+      </button>
+
+    </div>
+
+  </div>
+
+
+  <!-- =========================
+       CHAT APP
+  ========================== -->
+
+  <div
+    id="chatApp"
+    class="chat-app hidden"
+  >
+
+    <!-- HEADER -->
+
+    <header class="chat-header">
+
+      <div class="header-info">
+
+        <div class="header-title">
+          💬 Public Chat
+        </div>
+
+        <div id="currentUser">
+          -
+        </div>
+
+      </div>
+
+
+      <button
+        id="logoutButton"
+        class="logout-button"
+        type="button"
+      >
+        Keluar
+      </button>
+
+    </header>
+
+
+    <!-- MESSAGE AREA -->
+
+    <main
+      id="messages"
+      class="messages"
+    >
+
+      <div class="loading">
+        Memuat pesan...
+      </div>
+
+    </main>
+
+
+    <!-- INPUT AREA -->
+
+    <footer class="chat-input-area">
+
+      <input
+        id="messageInput"
+        type="text"
+        placeholder="Ketik pesan..."
+        maxlength="1000"
+        autocomplete="off"
+      >
+
+      <button
+        id="sendButton"
+        type="button"
+      >
+        Kirim
+      </button>
+
+    </footer>
+
+  </div>
+
+
+  <script src="app.js"></script>
+
+</body>
+
+</html>
