@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -15,56 +17,202 @@
 
   <title>Private Chat</title>
 
-  <link rel="stylesheet" href="style.css">
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
 </head>
+
 
 <body>
 
-  <!-- LOGIN -->
-  <section id="loginScreen" class="login-screen">
+
+  <!-- =====================================
+       AUTH
+  ====================================== -->
+
+  <section
+    id="loginScreen"
+    class="login-screen"
+  >
 
     <div class="login-card">
 
-      <div class="logo">💬</div>
+      <div class="logo">
+        💬
+      </div>
 
-      <h1>Private Chat</h1>
+      <h1>
+        Private Chat
+      </h1>
 
-      <p>
-        Masukkan nama kamu untuk mulai chat.
-      </p>
 
-      <input
-        id="nameInput"
-        type="text"
-        placeholder="Nama kamu"
-        maxlength="30"
-        autocomplete="off"
-      >
-
-      <button
-        id="loginButton"
-        type="button"
-      >
-        Masuk
-      </button>
+      <!-- LOGIN FORM -->
 
       <div
-        id="loginStatus"
-        class="small-status"
-      ></div>
+        id="loginForm"
+        class="auth-form"
+      >
+
+        <h2>
+          Masuk
+        </h2>
+
+        <p>
+          Masuk untuk melanjutkan chat.
+        </p>
+
+
+        <input
+          id="loginUsername"
+          type="text"
+          placeholder="Username"
+          maxlength="30"
+          autocomplete="username"
+        >
+
+
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="Password"
+          maxlength="100"
+          autocomplete="current-password"
+        >
+
+
+        <button
+          id="loginButton"
+          type="button"
+        >
+          Masuk
+        </button>
+
+
+        <div
+          id="loginStatus"
+          class="small-status"
+        ></div>
+
+
+        <div class="auth-switch">
+
+          Belum punya akun?
+
+          <button
+            id="showRegisterButton"
+            type="button"
+            class="link-button"
+          >
+            Daftar
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- REGISTER FORM -->
+
+      <div
+        id="registerForm"
+        class="auth-form hidden"
+      >
+
+        <h2>
+          Buat Akun
+        </h2>
+
+        <p>
+          Akun ini bisa digunakan
+          di perangkat lain.
+        </p>
+
+
+        <input
+          id="registerName"
+          type="text"
+          placeholder="Nama tampilan"
+          maxlength="30"
+          autocomplete="name"
+        >
+
+
+        <input
+          id="registerUsername"
+          type="text"
+          placeholder="Username"
+          maxlength="30"
+          autocomplete="username"
+        >
+
+
+        <input
+          id="registerPassword"
+          type="password"
+          placeholder="Password minimal 6 karakter"
+          maxlength="100"
+          autocomplete="new-password"
+        >
+
+
+        <input
+          id="registerPassword2"
+          type="password"
+          placeholder="Ulangi password"
+          maxlength="100"
+          autocomplete="new-password"
+        >
+
+
+        <button
+          id="registerButton"
+          type="button"
+        >
+          Daftar
+        </button>
+
+
+        <div
+          id="registerStatus"
+          class="small-status"
+        ></div>
+
+
+        <div class="auth-switch">
+
+          Sudah punya akun?
+
+          <button
+            id="showLoginButton"
+            type="button"
+            class="link-button"
+          >
+            Masuk
+          </button>
+
+        </div>
+
+      </div>
 
     </div>
 
   </section>
 
 
-  <!-- APP -->
+  <!-- =====================================
+       APP
+  ====================================== -->
+
   <section
     id="appScreen"
     class="app-screen hidden"
   >
 
-    <!-- SIDEBAR / USER LIST -->
+
+    <!-- SIDEBAR -->
+
     <aside
       id="sidebar"
       class="sidebar"
@@ -73,6 +221,7 @@
       <header class="sidebar-header">
 
         <div>
+
           <div class="app-title">
             💬 Private Chat
           </div>
@@ -81,13 +230,19 @@
             id="myName"
             class="my-name"
           ></div>
+
+          <div
+            id="myUsername"
+            class="my-username"
+          ></div>
+
         </div>
+
 
         <button
           id="logoutButton"
           class="icon-button"
           type="button"
-          title="Keluar"
         >
           Keluar
         </button>
@@ -115,12 +270,14 @@
 
 
     <!-- CHAT PANEL -->
+
     <main
       id="chatPanel"
       class="chat-panel"
     >
 
-      <!-- EMPTY STATE -->
+
+      <!-- EMPTY -->
 
       <div
         id="emptyChat"
@@ -131,21 +288,27 @@
           💬
         </div>
 
-        <h2>Private Chat</h2>
+        <h2>
+          Private Chat
+        </h2>
 
         <p>
-          Pilih pengguna untuk mulai percakapan.
+          Pilih pengguna untuk
+          mulai percakapan.
         </p>
 
       </div>
 
 
-      <!-- ACTIVE CONVERSATION -->
+      <!-- CONVERSATION -->
 
       <div
         id="conversation"
         class="conversation hidden"
       >
+
+
+        <!-- CHAT HEADER -->
 
         <header class="chat-header">
 
@@ -159,9 +322,13 @@
 
 
           <div class="partner-avatar">
-            <span id="partnerInitial">
+
+            <span
+              id="partnerInitial"
+            >
               ?
             </span>
+
           </div>
 
 
@@ -184,33 +351,40 @@
         </header>
 
 
+        <!-- MESSAGES -->
+
         <div
           id="messages"
           class="messages"
         ></div>
-        
+
+
+        <!-- ACTIVE REPLY -->
+
         <div
           id="activeReply"
           class="active-reply hidden"
         >
-        
-          <div class="active-reply-content">
-        
+
+          <div
+            class="active-reply-content"
+          >
+
             <div
               id="activeReplyTitle"
               class="active-reply-title"
             >
               Reply
             </div>
-        
+
             <div
               id="activeReplyText"
               class="active-reply-text"
             ></div>
-        
+
           </div>
-        
-        
+
+
           <button
             id="cancelReplyButton"
             class="cancel-reply"
@@ -218,9 +392,11 @@
           >
             ×
           </button>
-        
+
         </div>
-        
+
+
+        <!-- COMPOSER -->
 
         <footer class="composer">
 
@@ -231,6 +407,7 @@
             placeholder="Ketik pesan..."
             autocomplete="off"
           >
+
 
           <button
             id="sendButton"
@@ -251,4 +428,5 @@
   <script src="app.js"></script>
 
 </body>
+
 </html>
