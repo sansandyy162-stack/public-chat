@@ -1,16 +1,29 @@
 /* =========================================================
-   PRIVATE CHAT
-   SUPABASE REALTIME V2.2
-   - Realtime Message
-   - Realtime Unread
-   - Read Receipt
-   - Realtime Presence Online / Offline
-   - Last Seen
+   PRIVATE CHAT SUPABASE REALTIME V2.4
+
+   FITUR:
+   - Supabase Auth
+   - Realtime message
+   - Optimistic message
+   - Realtime unread
+   - Read receipt
+   - Presence Online / Offline
+   - Last Seen heartbeat
+   - Typing indicator
+   - Reply
+   - Copy
+   - Edit
+   - Delete
+   - Emoji picker
+   - Multiline message
+   - Ctrl/Cmd + Enter = Send
+   - Shared realtime wallpaper
+   - Browser tab notification dot
 ========================================================= */
 
 
 /* =========================================================
-   SUPABASE CONFIG
+   SUPABASE
 ========================================================= */
 
 const SUPABASE_URL =
@@ -27,6 +40,19 @@ const supabaseClient =
 
 
 /* =========================================================
+   CONSTANT
+========================================================= */
+
+const APP_TITLE = "Private Chat";
+
+const DEFAULT_FAVICON =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
+
+const UNREAD_FAVICON =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3Ccircle cx='51' cy='13' r='11' fill='%23e53935' stroke='white' stroke-width='4'/%3E%3C/svg%3E";
+
+
+/* =========================================================
    STATE
 ========================================================= */
 
@@ -40,20 +66,27 @@ let serverMessages = [];
 let pendingMessages = [];
 
 let replyingTo = null;
+let editingMessage = null;
+let selectedMessage = null;
 
 let realtimeChannel = null;
 let presenceChannel = null;
 
-/*
- * Menyimpan ID user yang sedang online.
- */
 let onlineUsers = new Set();
 
-/*
- * Timer untuk refresh tulisan:
- * "Aktif 1 menit lalu"
- */
 let lastSeenTimer = null;
+
+let typingTimer = null;
+let remoteTypingTimer = null;
+
+let isTyping = false;
+let remoteUserTyping = false;
+
+let currentRoomId = null;
+let currentRoomSettings = null;
+
+let selectedWallpaperFile = null;
+let selectedWallpaperPreviewUrl = null;
 
 
 /* =========================================================
@@ -65,9 +98,6 @@ const loginScreen =
 
 const appScreen =
   document.getElementById("appScreen");
-
-
-/* AUTH */
 
 const loginForm =
   document.getElementById("loginForm");
@@ -87,7 +117,6 @@ const loginButton =
 const loginStatus =
   document.getElementById("loginStatus");
 
-
 const registerName =
   document.getElementById("registerName");
 
@@ -106,15 +135,11 @@ const registerButton =
 const registerStatus =
   document.getElementById("registerStatus");
 
-
 const showRegisterButton =
   document.getElementById("showRegisterButton");
 
 const showLoginButton =
   document.getElementById("showLoginButton");
-
-
-/* APP */
 
 const myName =
   document.getElementById("myName");
@@ -155,9 +180,6 @@ const messageInput =
 const sendButton =
   document.getElementById("sendButton");
 
-
-/* REPLY */
-
 const activeReply =
   document.getElementById("activeReply");
 
@@ -169,6 +191,69 @@ const activeReplyText =
 
 const cancelReplyButton =
   document.getElementById("cancelReplyButton");
+
+const activeEdit =
+  document.getElementById("activeEdit");
+
+const activeEditText =
+  document.getElementById("activeEditText");
+
+const cancelEditButton =
+  document.getElementById("cancelEditButton");
+
+const emojiButton =
+  document.getElementById("emojiButton");
+
+const emojiPanel =
+  document.getElementById("emojiPanel");
+
+const messageMenu =
+  document.getElementById("messageMenu");
+
+const messageMenuBackdrop =
+  document.getElementById("messageMenuBackdrop");
+
+const menuReply =
+  document.getElementById("menuReply");
+
+const menuCopy =
+  document.getElementById("menuCopy");
+
+const menuEdit =
+  document.getElementById("menuEdit");
+
+const menuDelete =
+  document.getElementById("menuDelete");
+
+const wallpaperButton =
+  document.getElementById("wallpaperButton");
+
+const wallpaperModal =
+  document.getElementById("wallpaperModal");
+
+const closeWallpaperModal =
+  document.getElementById("closeWallpaperModal");
+
+const wallpaperInput =
+  document.getElementById("wallpaperInput");
+
+const chooseWallpaperButton =
+  document.getElementById("chooseWallpaperButton");
+
+const saveWallpaperButton =
+  document.getElementById("saveWallpaperButton");
+
+const removeWallpaperButton =
+  document.getElementById("removeWallpaperButton");
+
+const wallpaperPreview =
+  document.getElementById("wallpaperPreview");
+
+const wallpaperStatus =
+  document.getElementById("wallpaperStatus");
+
+const appFavicon =
+  document.getElementById("appFavicon");
 
 
 /* =========================================================
@@ -185,7 +270,6 @@ async function init() {
       .auth
       .getSession();
 
-
   if (error) {
 
     console.error(
@@ -198,7 +282,6 @@ async function init() {
     return;
   }
 
-
   if (data.session) {
 
     currentUser =
@@ -210,7 +293,6 @@ async function init() {
 
     showLogin();
   }
-
 
   supabaseClient
     .auth
@@ -230,6 +312,14 @@ async function init() {
             lastSeenTimer
           );
 
+          clearTimeout(
+            typingTimer
+          );
+
+          clearTimeout(
+            remoteTypingTimer
+          );
+
           currentUser = null;
           currentProfile = null;
           currentPartner = null;
@@ -240,6 +330,8 @@ async function init() {
           pendingMessages = [];
 
           onlineUsers.clear();
+
+          resetNotificationIndicator();
 
           showLogin();
         }
@@ -321,10 +413,8 @@ async function registerAccount() {
   const password2 =
     registerPassword2.value;
 
-
   registerStatus.className =
     "small-status";
-
 
   if (
     !name ||
@@ -339,7 +429,6 @@ async function registerAccount() {
     return;
   }
 
-
   if (
     password.length < 6
   ) {
@@ -350,7 +439,6 @@ async function registerAccount() {
 
     return;
   }
-
 
   if (
     password !== password2
@@ -363,12 +451,10 @@ async function registerAccount() {
     return;
   }
 
-
   registerButton.disabled = true;
 
   registerStatus.textContent =
     "Membuat akun...";
-
 
   try {
 
@@ -380,25 +466,21 @@ async function registerAccount() {
         .auth
         .signUp({
 
-          email: email,
+          email,
 
-          password: password,
+          password,
 
           options: {
 
             data: {
-              name: name
+              name
             }
-
           }
-
         });
-
 
     if (error) {
       throw error;
     }
-
 
     if (data.session) {
 
@@ -410,13 +492,11 @@ async function registerAccount() {
       return;
     }
 
-
     registerStatus.className =
       "small-status success";
 
     registerStatus.textContent =
       "Akun dibuat. Silakan login.";
-
 
   } catch (error) {
 
@@ -447,7 +527,6 @@ async function loginAccount() {
   const password =
     loginPassword.value;
 
-
   if (
     !email ||
     !password
@@ -460,7 +539,6 @@ async function loginAccount() {
     return;
   }
 
-
   loginButton.disabled = true;
 
   loginStatus.className =
@@ -468,7 +546,6 @@ async function loginAccount() {
 
   loginStatus.textContent =
     "Masuk...";
-
 
   try {
 
@@ -479,17 +556,13 @@ async function loginAccount() {
       await supabaseClient
         .auth
         .signInWithPassword({
-
-          email: email,
-          password: password
-
+          email,
+          password
         });
-
 
     if (error) {
       throw error;
     }
-
 
     currentUser =
       data.user;
@@ -499,7 +572,6 @@ async function loginAccount() {
     loginStatus.textContent = "";
 
     await startApp();
-
 
   } catch (error) {
 
@@ -525,7 +597,6 @@ async function startApp() {
     return;
   }
 
-
   loginScreen.classList.add(
     "hidden"
   );
@@ -534,10 +605,8 @@ async function startApp() {
     "hidden"
   );
 
-
   const ok =
     await loadMyProfile();
-
 
   if (!ok) {
 
@@ -548,15 +617,14 @@ async function startApp() {
     return;
   }
 
-
   myName.textContent =
     currentProfile.name;
 
   myEmail.textContent =
     currentUser.email || "";
 
-
   currentPartner = null;
+  currentRoomId = null;
 
   appScreen.classList.remove(
     "chat-open"
@@ -570,46 +638,35 @@ async function startApp() {
     "hidden"
   );
 
-
-  /*
-   * Update waktu aktif terakhir.
-   */
   await updateLastSeen();
 
-
-  /*
-   * Load daftar user + unread.
-   */
   await loadUsers();
 
-
-  /*
-   * Realtime messages.
-   */
   subscribeRealtime();
 
-
-  /*
-   * Realtime Presence.
-   */
   subscribePresence();
 
-
-  /*
-   * Kita TIDAK lagi heartbeat database
-   * setiap 20 detik.
-   *
-   * Timer ini hanya refresh tampilan
-   * "Aktif X menit lalu".
-   */
   clearInterval(
     lastSeenTimer
   );
 
+  /*
+   * Presence menentukan ONLINE.
+   *
+   * Heartbeat ini menyimpan last_seen,
+   * sehingga saat Presence hilang,
+   * waktu terakhir aktif tetap akurat.
+   */
   lastSeenTimer =
     setInterval(
-      refreshStatusDisplay,
-      30000
+      async () => {
+
+        await updateLastSeen();
+
+        refreshStatusDisplay();
+
+      },
+      15000
     );
 }
 
@@ -633,7 +690,6 @@ async function loadMyProfile() {
       )
       .single();
 
-
   if (error) {
 
     console.error(
@@ -643,7 +699,6 @@ async function loadMyProfile() {
 
     return false;
   }
-
 
   currentProfile = data;
 
@@ -660,7 +715,6 @@ async function loadUsers() {
   if (!currentUser) {
     return;
   }
-
 
   const {
     data,
@@ -680,7 +734,6 @@ async function loadUsers() {
         }
       );
 
-
   if (error) {
 
     console.error(
@@ -691,7 +744,6 @@ async function loadUsers() {
     return;
   }
 
-
   const oldProfiles =
     new Map(
       profiles.map(
@@ -701,7 +753,6 @@ async function loadUsers() {
         ]
       )
     );
-
 
   profiles =
     (data || []).map(
@@ -732,18 +783,16 @@ async function loadUsers() {
             old
               ? old.last_message_at || ""
               : ""
-
         };
       }
     );
-
 
   await loadUserPreviews();
 }
 
 
 /* =========================================================
-   USER PREVIEWS + UNREAD
+   USER PREVIEW + UNREAD
 ========================================================= */
 
 async function loadUserPreviews() {
@@ -752,9 +801,7 @@ async function loadUserPreviews() {
     return;
   }
 
-
   const rendered = [];
-
 
   for (
     const profile
@@ -779,7 +826,6 @@ async function loadUserPreviews() {
         )
         .limit(1);
 
-
     if (lastError) {
 
       console.error(
@@ -787,7 +833,6 @@ async function loadUserPreviews() {
         lastError
       );
     }
-
 
     const {
       count,
@@ -815,22 +860,19 @@ async function loadUserPreviews() {
           null
         );
 
-
     if (countError) {
 
       console.error(
-        "Unread count:",
+        "Unread:",
         countError
       );
     }
-
 
     const last =
       lastMessages &&
       lastMessages.length
         ? lastMessages[0]
         : null;
-
 
     rendered.push({
 
@@ -848,16 +890,16 @@ async function loadUserPreviews() {
         last
           ? last.created_at
           : ""
-
     });
   }
-
 
   profiles = rendered;
 
   sortProfiles();
 
   renderUsers();
+
+  updateNotificationIndicator();
 }
 
 
@@ -884,14 +926,12 @@ function sortProfiles() {
             ).getTime()
           : 0;
 
-
       if (
         bTime !== aTime
       ) {
 
         return bTime - aTime;
       }
-
 
       return (
         a.name || ""
@@ -905,15 +945,11 @@ function sortProfiles() {
 
 
 /* =========================================================
-   PRESENCE
+   PRESENCE + TYPING BROADCAST
 ========================================================= */
 
 function subscribePresence() {
 
-  /*
-   * Bersihkan channel Presence lama
-   * kalau ada.
-   */
   if (presenceChannel) {
 
     supabaseClient
@@ -924,14 +960,8 @@ function subscribePresence() {
     presenceChannel = null;
   }
 
-
   onlineUsers.clear();
 
-
-  /*
-   * Semua user masuk ke room Presence
-   * yang sama.
-   */
   presenceChannel =
     supabaseClient.channel(
       "private-chat-presence",
@@ -940,73 +970,52 @@ function subscribePresence() {
         config: {
 
           presence: {
-
-            /*
-             * Satu user = satu presence key.
-             */
-            key:
-              currentUser.id
-
+            key: currentUser.id
           }
-
         }
-
       }
     );
 
-
-  /*
-   * SYNC
-   *
-   * Dipanggil saat daftar user online
-   * berubah.
-   */
   presenceChannel.on(
     "presence",
     {
       event: "sync"
     },
-    () => {
-
-      syncOnlineUsers();
-    }
+    syncOnlineUsers
   );
 
-
-  /*
-   * JOIN
-   *
-   * Ada user masuk / membuka aplikasi.
-   */
   presenceChannel.on(
     "presence",
     {
       event: "join"
     },
-    () => {
-
-      syncOnlineUsers();
-    }
+    syncOnlineUsers
   );
 
-
-  /*
-   * LEAVE
-   *
-   * User close tab / browser /
-   * koneksi Presence terputus.
-   */
   presenceChannel.on(
     "presence",
     {
       event: "leave"
     },
-    () => {
-
-      syncOnlineUsers();
-    }
+    syncOnlineUsers
   );
 
+  /*
+   * Typing memakai Broadcast.
+   * Tidak masuk database.
+   */
+  presenceChannel.on(
+    "broadcast",
+    {
+      event: "typing"
+    },
+    payload => {
+
+      handleRemoteTyping(
+        payload.payload
+      );
+    }
+  );
 
   presenceChannel.subscribe(
     async status => {
@@ -1016,15 +1025,10 @@ function subscribePresence() {
         status
       );
 
-
       if (
         status === "SUBSCRIBED"
       ) {
 
-        /*
-         * Beritahu Presence:
-         * "Saya sedang online."
-         */
         await presenceChannel.track({
 
           user_id:
@@ -1038,7 +1042,6 @@ function subscribePresence() {
           online_at:
             new Date()
               .toISOString()
-
         });
       }
     }
@@ -1046,37 +1049,19 @@ function subscribePresence() {
 }
 
 
-/* =========================================================
-   SYNC ONLINE USERS
-========================================================= */
-
 function syncOnlineUsers() {
 
   if (!presenceChannel) {
     return;
   }
 
-
   const state =
     presenceChannel
       .presenceState();
 
-
   const newOnlineUsers =
     new Set();
 
-
-  /*
-   * Presence state bentuknya:
-   *
-   * {
-   *   "USER_UUID": [...]
-   * }
-   *
-   * Karena presence key kita adalah
-   * currentUser.id, key object tersebut
-   * adalah ID user.
-   */
   Object.keys(
     state
   ).forEach(
@@ -1088,22 +1073,12 @@ function syncOnlineUsers() {
     }
   );
 
-
   onlineUsers =
     newOnlineUsers;
 
-
-  /*
-   * Update tampilan sidebar +
-   * header conversation.
-   */
   refreshStatusDisplay();
 }
 
-
-/* =========================================================
-   IS USER ONLINE
-========================================================= */
 
 function isUserOnline(
   userId
@@ -1116,49 +1091,212 @@ function isUserOnline(
 
 
 /* =========================================================
-   REFRESH STATUS DISPLAY
+   TYPING
 ========================================================= */
 
-function refreshStatusDisplay() {
+async function sendTypingState(
+  typing
+) {
 
-  /*
-   * Refresh sidebar.
-   */
-  renderUsers();
+  if (
+    !presenceChannel ||
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+  if (
+    isTyping === typing
+  ) {
+    return;
+  }
+
+  isTyping = typing;
+
+  try {
+
+    await presenceChannel.send({
+
+      type: "broadcast",
+
+      event: "typing",
+
+      payload: {
+
+        sender_id:
+          currentUser.id,
+
+        receiver_id:
+          currentPartner.id,
+
+        typing
+      }
+    });
+
+  } catch (error) {
+
+    console.log(
+      "Typing:",
+      error
+    );
+  }
+}
 
 
-  /*
-   * Refresh status user yang sedang
-   * dibuka.
-   */
-  if (currentPartner) {
+function handleLocalTyping() {
+
+  if (
+    !currentPartner
+  ) {
+    return;
+  }
+
+  const hasText =
+    messageInput
+      .value
+      .trim()
+      .length > 0;
+
+  clearTimeout(
+    typingTimer
+  );
+
+  if (!hasText) {
+
+    sendTypingState(
+      false
+    );
+
+    return;
+  }
+
+  sendTypingState(
+    true
+  );
+
+  typingTimer =
+    setTimeout(
+      () => {
+
+        sendTypingState(
+          false
+        );
+
+      },
+      1500
+    );
+}
+
+
+function handleRemoteTyping(
+  payload
+) {
+
+  if (
+    !payload ||
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+  if (
+    payload.receiver_id !==
+      currentUser.id
+  ) {
+    return;
+  }
+
+  if (
+    payload.sender_id !==
+      currentPartner.id
+  ) {
+    return;
+  }
+
+  clearTimeout(
+    remoteTypingTimer
+  );
+
+  remoteUserTyping =
+    Boolean(
+      payload.typing
+    );
+
+  if (
+    remoteUserTyping
+  ) {
 
     partnerStatus.textContent =
-      getUserStatus(
-        currentPartner
+      "mengetik...";
+
+    /*
+     * Safety timeout jika event false
+     * gagal diterima.
+     */
+    remoteTypingTimer =
+      setTimeout(
+        () => {
+
+          remoteUserTyping = false;
+
+          refreshPartnerStatus();
+
+        },
+        2500
       );
+
+  } else {
+
+    refreshPartnerStatus();
   }
 }
 
 
 /* =========================================================
-   USER STATUS
+   STATUS
 ========================================================= */
+
+function refreshStatusDisplay() {
+
+  renderUsers();
+
+  refreshPartnerStatus();
+}
+
+
+function refreshPartnerStatus() {
+
+  if (!currentPartner) {
+    return;
+  }
+
+  if (
+    remoteUserTyping
+  ) {
+
+    partnerStatus.textContent =
+      "mengetik...";
+
+    return;
+  }
+
+  partnerStatus.textContent =
+    getUserStatus(
+      currentPartner
+    );
+}
+
 
 function getUserStatus(
   user
 ) {
 
   if (!user) {
-
     return "";
   }
 
-
-  /*
-   * Presence adalah sumber kebenaran
-   * untuk ONLINE.
-   */
   if (
     isUserOnline(
       user.id
@@ -1168,14 +1306,6 @@ function getUserStatus(
     return "Online";
   }
 
-
-  /*
-   * Kalau tidak ada di Presence,
-   * berarti OFFLINE.
-   *
-   * Gunakan last_seen hanya untuk
-   * menunjukkan kapan terakhir aktif.
-   */
   return formatLastSeen(
     user.last_seen
   );
@@ -1190,7 +1320,6 @@ function renderUsers() {
 
   userList.innerHTML = "";
 
-
   if (!profiles.length) {
 
     userList.innerHTML =
@@ -1202,9 +1331,10 @@ function renderUsers() {
         </div>
       `;
 
+    updateNotificationIndicator();
+
     return;
   }
-
 
   profiles.forEach(
     user => {
@@ -1219,7 +1349,6 @@ function renderUsers() {
       button.className =
         "user-item";
 
-
       if (
         currentPartner &&
         currentPartner.id ===
@@ -1230,7 +1359,6 @@ function renderUsers() {
           "active"
         );
       }
-
 
       const avatar =
         document.createElement(
@@ -1245,7 +1373,6 @@ function renderUsers() {
           user.name
         );
 
-
       const info =
         document.createElement(
           "div"
@@ -1254,7 +1381,6 @@ function renderUsers() {
       info.className =
         "user-info";
 
-
       const top =
         document.createElement(
           "div"
@@ -1262,7 +1388,6 @@ function renderUsers() {
 
       top.className =
         "user-row-top";
-
 
       const name =
         document.createElement(
@@ -1275,17 +1400,14 @@ function renderUsers() {
       name.textContent =
         user.name;
 
-
       top.appendChild(
         name
       );
-
 
       const unread =
         Number(
           user.unread_count || 0
         );
-
 
       if (unread > 0) {
 
@@ -1307,28 +1429,15 @@ function renderUsers() {
         );
       }
 
-
       info.appendChild(
         top
       );
-
 
       const status =
         document.createElement(
           "div"
         );
 
-
-      /*
-       * Kalau ONLINE, kita prioritaskan
-       * tulisan Online.
-       *
-       * Kalau OFFLINE dan ada pesan,
-       * tetap tampil preview pesan.
-       *
-       * Kalau belum ada pesan,
-       * tampil last seen.
-       */
       if (
         isUserOnline(
           user.id
@@ -1362,11 +1471,9 @@ function renderUsers() {
           );
       }
 
-
       info.appendChild(
         status
       );
-
 
       button.appendChild(
         avatar
@@ -1376,18 +1483,18 @@ function renderUsers() {
         info
       );
 
-
       button.addEventListener(
         "click",
         () => openChat(user)
       );
-
 
       userList.appendChild(
         button
       );
     }
   );
+
+  updateNotificationIndicator();
 }
 
 
@@ -1395,7 +1502,19 @@ function renderUsers() {
    OPEN CHAT
 ========================================================= */
 
-async function openChat(user) {
+async function openChat(
+  user
+) {
+
+  /*
+   * Matikan typing room lama.
+   */
+  if (currentPartner) {
+
+    await sendTypingState(
+      false
+    );
+  }
 
   const freshUser =
     profiles.find(
@@ -1403,17 +1522,26 @@ async function openChat(user) {
         item.id === user.id
     ) || user;
 
-
   currentPartner = {
     ...freshUser
   };
 
+  currentRoomId =
+    makeRoomId(
+      currentUser.id,
+      currentPartner.id
+    );
 
   serverMessages = [];
   pendingMessages = [];
 
   cancelReply();
+  cancelEdit();
 
+  closeEmojiPanel();
+  closeMessageMenu();
+
+  remoteUserTyping = false;
 
   partnerName.textContent =
     currentPartner.name;
@@ -1423,11 +1551,7 @@ async function openChat(user) {
       currentPartner.name
     );
 
-  partnerStatus.textContent =
-    getUserStatus(
-      currentPartner
-    );
-
+  refreshPartnerStatus();
 
   emptyChat.classList.add(
     "hidden"
@@ -1441,14 +1565,12 @@ async function openChat(user) {
     "chat-open"
   );
 
-
   messagesElement.innerHTML =
     `
       <div class="no-message">
         Memuat percakapan...
       </div>
     `;
-
 
   setProfileUnread(
     currentPartner.id,
@@ -1457,29 +1579,42 @@ async function openChat(user) {
 
   renderUsers();
 
+  await ensureRoomSettings();
 
   await loadMessages();
 
   await markAsRead();
-
 
   messageInput.focus();
 }
 
 
 /* =========================================================
-   CLOSE CHAT / BACK
+   CLOSE CHAT
 ========================================================= */
 
-function closeMobileChat() {
+async function closeMobileChat() {
+
+  await sendTypingState(
+    false
+  );
 
   currentPartner = null;
+  currentRoomId = null;
+  currentRoomSettings = null;
 
   serverMessages = [];
   pendingMessages = [];
 
-  cancelReply();
+  remoteUserTyping = false;
 
+  cancelReply();
+  cancelEdit();
+
+  closeEmojiPanel();
+  closeMessageMenu();
+
+  resetWallpaper();
 
   appScreen.classList.remove(
     "chat-open"
@@ -1493,20 +1628,18 @@ function closeMobileChat() {
     "hidden"
   );
 
-
   partnerName.textContent = "";
   partnerInitial.textContent = "";
   partnerStatus.textContent = "";
 
   messagesElement.innerHTML = "";
 
-
   renderUsers();
 }
 
 
 /* =========================================================
-   LOAD HISTORY
+   LOAD MESSAGES
 ========================================================= */
 
 async function loadMessages() {
@@ -1518,10 +1651,8 @@ async function loadMessages() {
     return;
   }
 
-
   const partnerId =
     currentPartner.id;
-
 
   const {
     data,
@@ -1540,7 +1671,6 @@ async function loadMessages() {
         }
       );
 
-
   if (error) {
 
     console.error(
@@ -1551,7 +1681,6 @@ async function loadMessages() {
     return;
   }
 
-
   if (
     !currentPartner ||
     currentPartner.id !==
@@ -1561,10 +1690,8 @@ async function loadMessages() {
     return;
   }
 
-
   serverMessages =
     data || [];
-
 
   reconcilePending();
 
@@ -1575,14 +1702,11 @@ async function loadMessages() {
 
 
 /* =========================================================
-   REALTIME MESSAGE
+   REALTIME
 ========================================================= */
 
 function subscribeRealtime() {
 
-  /*
-   * Hanya cleanup message channel.
-   */
   if (realtimeChannel) {
 
     supabaseClient
@@ -1593,7 +1717,6 @@ function subscribeRealtime() {
     realtimeChannel = null;
   }
 
-
   realtimeChannel =
     supabaseClient
       .channel(
@@ -1601,66 +1724,80 @@ function subscribeRealtime() {
         currentUser.id
       )
 
-
       .on(
-
         "postgres_changes",
-
         {
           event: "INSERT",
           schema: "public",
           table: "messages"
         },
-
         payload => {
 
           handleRealtimeInsert(
             payload.new
           );
         }
-
       )
 
-
       .on(
-
         "postgres_changes",
-
         {
           event: "UPDATE",
           schema: "public",
           table: "messages"
         },
-
         payload => {
 
           handleRealtimeUpdate(
             payload.new
           );
         }
-
       )
 
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "messages"
+        },
+        payload => {
+
+          handleRealtimeDelete(
+            payload.old
+          );
+        }
+      )
 
       .on(
-
         "postgres_changes",
-
         {
           event: "UPDATE",
           schema: "public",
           table: "profiles"
         },
-
         payload => {
 
           handleProfileUpdate(
             payload.new
           );
         }
-
       )
 
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "room_settings"
+        },
+        payload => {
+
+          handleRoomSettingsRealtime(
+            payload
+          );
+        }
+      )
 
       .subscribe(
         status => {
@@ -1686,22 +1823,16 @@ function handleRealtimeInsert(
     return;
   }
 
-
   const involvesMe =
-
     message.sender_id ===
       currentUser.id
-
     ||
-
     message.receiver_id ===
       currentUser.id;
-
 
   if (!involvesMe) {
     return;
   }
-
 
   const partnerId =
     message.sender_id ===
@@ -1709,23 +1840,17 @@ function handleRealtimeInsert(
       ? message.receiver_id
       : message.sender_id;
 
-
   updateSidebarFromMessage(
     message
   );
 
-
   const roomIsOpen =
-
     currentPartner &&
-
     currentPartner.id ===
       partnerId &&
-
     appScreen.classList.contains(
       "chat-open"
     );
-
 
   if (roomIsOpen) {
 
@@ -1736,7 +1861,6 @@ function handleRealtimeInsert(
           message.id
       );
 
-
     if (!exists) {
 
       serverMessages.push(
@@ -1744,25 +1868,19 @@ function handleRealtimeInsert(
       );
     }
 
-
     reconcilePending();
 
     renderMessages(
       true
     );
 
-
     if (
       message.sender_id ===
         partnerId
-
       &&
-
       message.receiver_id ===
         currentUser.id
-
       &&
-
       document.visibilityState ===
         "visible"
     ) {
@@ -1781,7 +1899,8 @@ function handleRealtimeInsert(
 
     if (
       message.receiver_id ===
-        currentUser.id &&
+        currentUser.id
+      &&
       message.sender_id ===
         partnerId
     ) {
@@ -1791,11 +1910,12 @@ function handleRealtimeInsert(
       );
     }
 
-
     sortProfiles();
 
     renderUsers();
   }
+
+  updateNotificationIndicator();
 }
 
 
@@ -1811,22 +1931,16 @@ function handleRealtimeUpdate(
     return;
   }
 
-
   const involvesMe =
-
     message.sender_id ===
       currentUser.id
-
     ||
-
     message.receiver_id ===
       currentUser.id;
-
 
   if (!involvesMe) {
     return;
   }
-
 
   const index =
     serverMessages.findIndex(
@@ -1834,7 +1948,6 @@ function handleRealtimeUpdate(
         item.id ===
         message.id
     );
-
 
   if (index !== -1) {
 
@@ -1846,11 +1959,9 @@ function handleRealtimeUpdate(
     );
   }
 
-
   updateSidebarFromMessage(
     message
   );
-
 
   if (
     currentPartner &&
@@ -1867,15 +1978,51 @@ function handleRealtimeUpdate(
     );
   }
 
-
   sortProfiles();
 
   renderUsers();
+
+  updateNotificationIndicator();
 }
 
 
 /* =========================================================
-   SIDEBAR FROM MESSAGE
+   REALTIME DELETE
+========================================================= */
+
+async function handleRealtimeDelete(
+  oldMessage
+) {
+
+  if (
+    !oldMessage ||
+    !oldMessage.id
+  ) {
+    return;
+  }
+
+  serverMessages =
+    serverMessages.filter(
+      item =>
+        item.id !==
+        oldMessage.id
+    );
+
+  renderMessages(
+    false
+  );
+
+  /*
+   * DELETE realtime bisa hanya membawa
+   * primary key tergantung replica identity.
+   * Refresh preview agar sidebar tetap benar.
+   */
+  await loadUsers();
+}
+
+
+/* =========================================================
+   SIDEBAR MESSAGE
 ========================================================= */
 
 function updateSidebarFromMessage(
@@ -1886,20 +2033,18 @@ function updateSidebarFromMessage(
     return;
   }
 
-
   const partnerId =
     message.sender_id ===
       currentUser.id
       ? message.receiver_id
       : message.sender_id;
 
-
   const index =
     profiles.findIndex(
       item =>
-        item.id === partnerId
+        item.id ===
+          partnerId
     );
-
 
   if (index === -1) {
 
@@ -1907,7 +2052,6 @@ function updateSidebarFromMessage(
 
     return;
   }
-
 
   profiles[index] = {
 
@@ -1920,9 +2064,7 @@ function updateSidebarFromMessage(
 
     last_message_at:
       message.created_at
-
   };
-
 
   sortProfiles();
 
@@ -1941,20 +2083,21 @@ function incrementProfileUnread(
   const index =
     profiles.findIndex(
       item =>
-        item.id === profileId
+        item.id ===
+          profileId
     );
-
 
   if (index === -1) {
     return;
   }
-
 
   profiles[index].unread_count =
     Number(
       profiles[index]
         .unread_count || 0
     ) + 1;
+
+  updateNotificationIndicator();
 }
 
 
@@ -1966,17 +2109,63 @@ function setProfileUnread(
   const index =
     profiles.findIndex(
       item =>
-        item.id === profileId
+        item.id ===
+          profileId
     );
-
 
   if (index === -1) {
     return;
   }
 
-
   profiles[index].unread_count =
     Number(value) || 0;
+
+  updateNotificationIndicator();
+}
+
+
+/* =========================================================
+   TAB NOTIFICATION
+========================================================= */
+
+function updateNotificationIndicator() {
+
+  const hasUnread =
+    profiles.some(
+      profile =>
+        Number(
+          profile.unread_count || 0
+        ) > 0
+    );
+
+  if (hasUnread) {
+
+    document.title =
+      "● " + APP_TITLE;
+
+    if (appFavicon) {
+
+      appFavicon.href =
+        UNREAD_FAVICON;
+    }
+
+  } else {
+
+    resetNotificationIndicator();
+  }
+}
+
+
+function resetNotificationIndicator() {
+
+  document.title =
+    APP_TITLE;
+
+  if (appFavicon) {
+
+    appFavicon.href =
+      DEFAULT_FAVICON;
+  }
 }
 
 
@@ -1992,13 +2181,11 @@ function handleProfileUpdate(
     return;
   }
 
-
   const index =
     profiles.findIndex(
       item =>
         item.id === profile.id
     );
-
 
   if (index !== -1) {
 
@@ -2018,10 +2205,8 @@ function handleProfileUpdate(
       last_message_at:
         profiles[index]
           .last_message_at || ""
-
     };
   }
-
 
   if (
     currentPartner &&
@@ -2033,23 +2218,17 @@ function handleProfileUpdate(
 
       ...currentPartner,
       ...profile
-
     };
 
-
-    partnerStatus.textContent =
-      getUserStatus(
-        currentPartner
-      );
+    refreshPartnerStatus();
   }
-
 
   renderUsers();
 }
 
 
 /* =========================================================
-   CLEANUP REALTIME + PRESENCE
+   CLEANUP
 ========================================================= */
 
 function cleanupRealtime() {
@@ -2064,18 +2243,13 @@ function cleanupRealtime() {
     realtimeChannel = null;
   }
 
-
   if (presenceChannel) {
 
-    /*
-     * Berhenti track Presence.
-     */
     presenceChannel
       .untrack()
       .catch(
         () => {}
       );
-
 
     supabaseClient
       .removeChannel(
@@ -2085,27 +2259,23 @@ function cleanupRealtime() {
     presenceChannel = null;
   }
 
-
   onlineUsers.clear();
 }
 
 
 /* =========================================================
-   RECONCILE OPTIMISTIC
+   RECONCILE PENDING
 ========================================================= */
 
 function reconcilePending() {
 
   const serverClientIds =
     new Set(
-
       serverMessages.map(
         message =>
           message.client_id
       )
-
     );
-
 
   pendingMessages =
     pendingMessages.filter(
@@ -2118,7 +2288,7 @@ function reconcilePending() {
 
 
 /* =========================================================
-   SEND MESSAGE
+   SEND / SAVE EDIT
 ========================================================= */
 
 async function sendMessage() {
@@ -2130,32 +2300,43 @@ async function sendMessage() {
     return;
   }
 
-
   const content =
     messageInput
       .value
       .trim();
 
-
   if (!content) {
     return;
   }
 
+  /*
+   * Jika sedang edit,
+   * tombol kirim menjadi SAVE.
+   */
+  if (editingMessage) {
+
+    await saveEditedMessage(
+      content
+    );
+
+    return;
+  }
+
+  await sendTypingState(
+    false
+  );
 
   const clientId =
     crypto.randomUUID();
-
 
   const partnerSnapshot = {
     ...currentPartner
   };
 
-
   const replyId =
     replyingTo
       ? replyingTo.id
       : null;
-
 
   const optimistic = {
 
@@ -2173,8 +2354,7 @@ async function sendMessage() {
     type:
       "text",
 
-    content:
-      content,
+    content,
 
     image_url:
       null,
@@ -2186,6 +2366,9 @@ async function sendMessage() {
       new Date()
         .toISOString(),
 
+    edited_at:
+      null,
+
     read_at:
       null,
 
@@ -2196,18 +2379,17 @@ async function sendMessage() {
       false
   };
 
-
   pendingMessages.push(
     optimistic
   );
-
 
   updateSidebarFromMessage(
     optimistic
   );
 
-
   messageInput.value = "";
+
+  autoResizeMessageInput();
 
   cancelReply();
 
@@ -2216,7 +2398,6 @@ async function sendMessage() {
   );
 
   messageInput.focus();
-
 
   const {
     data,
@@ -2238,16 +2419,13 @@ async function sendMessage() {
         type:
           "text",
 
-        content:
-          content,
+        content,
 
         reply_to:
           replyId
-
       })
       .select()
       .single();
-
 
   if (error) {
 
@@ -2256,14 +2434,12 @@ async function sendMessage() {
       error
     );
 
-
     const failed =
       pendingMessages.find(
         item =>
           item.client_id ===
-          clientId
+            clientId
       );
-
 
     if (failed) {
 
@@ -2271,14 +2447,12 @@ async function sendMessage() {
       failed.failed = true;
     }
 
-
     renderMessages(
       true
     );
 
     return;
   }
-
 
   if (data) {
 
@@ -2294,7 +2468,6 @@ async function sendMessage() {
             item.id === data.id
         );
 
-
       if (!exists) {
 
         serverMessages.push(
@@ -2302,14 +2475,12 @@ async function sendMessage() {
         );
       }
 
-
       reconcilePending();
 
       renderMessages(
         true
       );
     }
-
 
     updateSidebarFromMessage(
       data
@@ -2319,7 +2490,308 @@ async function sendMessage() {
 
 
 /* =========================================================
-   MARK READ
+   EDIT MESSAGE
+========================================================= */
+
+function startEdit(
+  message
+) {
+
+  if (
+    !message ||
+    !message.id ||
+    message.sender_id !==
+      currentUser.id
+  ) {
+    return;
+  }
+
+  cancelReply();
+
+  editingMessage = {
+    ...message
+  };
+
+  activeEditText.textContent =
+    message.content;
+
+  activeEdit.classList.remove(
+    "hidden"
+  );
+
+  messageInput.value =
+    message.content;
+
+  autoResizeMessageInput();
+
+  messageInput.focus();
+
+  const length =
+    messageInput.value.length;
+
+  messageInput.setSelectionRange(
+    length,
+    length
+  );
+}
+
+
+function cancelEdit() {
+
+  editingMessage = null;
+
+  activeEdit.classList.add(
+    "hidden"
+  );
+
+  activeEditText.textContent = "";
+
+  if (
+    messageInput
+  ) {
+
+    messageInput.value = "";
+
+    autoResizeMessageInput();
+  }
+}
+
+
+async function saveEditedMessage(
+  content
+) {
+
+  if (
+    !editingMessage ||
+    !currentUser
+  ) {
+    return;
+  }
+
+  const messageId =
+    editingMessage.id;
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("messages")
+      .update({
+
+        content,
+
+        edited_at:
+          new Date()
+            .toISOString()
+      })
+      .eq(
+        "id",
+        messageId
+      )
+      .eq(
+        "sender_id",
+        currentUser.id
+      )
+      .select()
+      .single();
+
+  if (error) {
+
+    console.error(
+      "Edit:",
+      error
+    );
+
+    alert(
+      "Pesan gagal diedit."
+    );
+
+    return;
+  }
+
+  const index =
+    serverMessages.findIndex(
+      item =>
+        item.id ===
+          messageId
+    );
+
+  if (
+    index !== -1 &&
+    data
+  ) {
+
+    serverMessages[index] =
+      data;
+  }
+
+  editingMessage = null;
+
+  activeEdit.classList.add(
+    "hidden"
+  );
+
+  activeEditText.textContent = "";
+
+  messageInput.value = "";
+
+  autoResizeMessageInput();
+
+  renderMessages(
+    false
+  );
+
+  if (data) {
+
+    updateSidebarFromMessage(
+      data
+    );
+  }
+
+  messageInput.focus();
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+async function deleteMessage(
+  message
+) {
+
+  if (
+    !message ||
+    !message.id ||
+    message.sender_id !==
+      currentUser.id
+  ) {
+    return;
+  }
+
+  const ok =
+    confirm(
+      "Hapus pesan ini?"
+    );
+
+  if (!ok) {
+    return;
+  }
+
+  const {
+    error
+  } =
+    await supabaseClient
+      .from("messages")
+      .delete()
+      .eq(
+        "id",
+        message.id
+      )
+      .eq(
+        "sender_id",
+        currentUser.id
+      );
+
+  if (error) {
+
+    console.error(
+      "Delete:",
+      error
+    );
+
+    alert(
+      "Pesan gagal dihapus."
+    );
+
+    return;
+  }
+
+  serverMessages =
+    serverMessages.filter(
+      item =>
+        item.id !==
+          message.id
+    );
+
+  if (
+    replyingTo &&
+    replyingTo.id ===
+      message.id
+  ) {
+
+    cancelReply();
+  }
+
+  if (
+    editingMessage &&
+    editingMessage.id ===
+      message.id
+  ) {
+
+    cancelEdit();
+  }
+
+  renderMessages(
+    false
+  );
+
+  await loadUsers();
+}
+
+
+/* =========================================================
+   COPY
+========================================================= */
+
+async function copyMessage(
+  message
+) {
+
+  if (!message) {
+    return;
+  }
+
+  const content =
+    String(
+      message.content || ""
+    );
+
+  try {
+
+    await navigator.clipboard
+      .writeText(
+        content
+      );
+
+  } catch (error) {
+
+    const textarea =
+      document.createElement(
+        "textarea"
+      );
+
+    textarea.value =
+      content;
+
+    document.body.appendChild(
+      textarea
+    );
+
+    textarea.select();
+
+    document.execCommand(
+      "copy"
+    );
+
+    textarea.remove();
+  }
+}
+
+
+/* =========================================================
+   MARK AS READ
 ========================================================= */
 
 async function markAsRead() {
@@ -2331,14 +2803,12 @@ async function markAsRead() {
     return;
   }
 
-
   if (
     document.visibilityState !==
       "visible"
   ) {
     return;
   }
-
 
   if (
     !appScreen.classList.contains(
@@ -2348,10 +2818,8 @@ async function markAsRead() {
     return;
   }
 
-
   const partnerId =
     currentPartner.id;
-
 
   setProfileUnread(
     partnerId,
@@ -2359,7 +2827,6 @@ async function markAsRead() {
   );
 
   renderUsers();
-
 
   const {
     error
@@ -2371,7 +2838,6 @@ async function markAsRead() {
         read_at:
           new Date()
             .toISOString()
-
       })
       .eq(
         "sender_id",
@@ -2385,7 +2851,6 @@ async function markAsRead() {
         "read_at",
         null
       );
-
 
   if (error) {
 
@@ -2409,21 +2874,17 @@ function renderMessages(
     return;
   }
 
-
   const nearBottom =
     messagesElement.scrollHeight -
     messagesElement.scrollTop -
     messagesElement.clientHeight
       < 120;
 
-
   const allMessages = [
 
     ...serverMessages,
     ...pendingMessages
-
   ];
-
 
   allMessages.sort(
     (a, b) =>
@@ -2439,9 +2900,7 @@ function renderMessages(
       ).getTime()
   );
 
-
   messagesElement.innerHTML = "";
-
 
   if (!allMessages.length) {
 
@@ -2457,7 +2916,6 @@ function renderMessages(
     return;
   }
 
-
   allMessages.forEach(
     message => {
 
@@ -2465,12 +2923,10 @@ function renderMessages(
         message.sender_id ===
           currentUser.id;
 
-
       const row =
         document.createElement(
           "div"
         );
-
 
       row.className =
         "message-row " +
@@ -2480,19 +2936,17 @@ function renderMessages(
             : "other"
         );
 
-
       const bubble =
         document.createElement(
           "div"
         );
 
-
       bubble.className =
         "message-bubble";
 
-
-      /* REPLY PREVIEW */
-
+      /*
+       * REPLY PREVIEW
+       */
       if (
         message.reply_to
       ) {
@@ -2504,36 +2958,29 @@ function renderMessages(
                 message.reply_to
           );
 
-
         const replyBox =
           document.createElement(
             "div"
           );
 
-
         replyBox.className =
           "reply-preview";
-
 
         const replyName =
           document.createElement(
             "div"
           );
 
-
         replyName.className =
           "reply-name";
-
 
         const replyText =
           document.createElement(
             "div"
           );
 
-
         replyText.className =
           "reply-text";
-
 
         if (original) {
 
@@ -2544,7 +2991,6 @@ function renderMessages(
               : currentPartner
                 ? currentPartner.name
                 : "User";
-
 
           replyText.textContent =
             original.content;
@@ -2557,7 +3003,6 @@ function renderMessages(
           replyText.textContent =
             "Pesan sebelumnya";
         }
-
 
         replyBox.appendChild(
           replyName
@@ -2572,12 +3017,10 @@ function renderMessages(
         );
       }
 
-
       const text =
         document.createElement(
           "div"
         );
-
 
       text.className =
         "message-text";
@@ -2585,38 +3028,51 @@ function renderMessages(
       text.textContent =
         message.content;
 
-
       bubble.appendChild(
         text
       );
-
 
       const meta =
         document.createElement(
           "div"
         );
 
-
       meta.className =
         "message-meta";
 
+      if (
+        message.edited_at
+      ) {
+
+        const edited =
+          document.createElement(
+            "span"
+          );
+
+        edited.className =
+          "edited-label";
+
+        edited.textContent =
+          "diedit";
+
+        meta.appendChild(
+          edited
+        );
+      }
 
       const time =
         document.createElement(
           "span"
         );
 
-
       time.textContent =
         formatTime(
           message.created_at
         );
 
-
       meta.appendChild(
         time
       );
-
 
       if (mine) {
 
@@ -2625,12 +3081,10 @@ function renderMessages(
             "span"
           );
 
-
         const state =
           getMessageState(
             message
           );
-
 
         status.className =
           "message-status " +
@@ -2639,17 +3093,14 @@ function renderMessages(
         status.textContent =
           state.text;
 
-
         meta.appendChild(
           status
         );
       }
 
-
       bubble.appendChild(
         meta
       );
-
 
       if (
         message.id &&
@@ -2659,13 +3110,15 @@ function renderMessages(
 
         bubble.addEventListener(
           "click",
-          () =>
-            startReply(
+          event => {
+
+            openMessageMenu(
+              event,
               message
-            )
+            );
+          }
         );
       }
-
 
       row.appendChild(
         bubble
@@ -2676,7 +3129,6 @@ function renderMessages(
       );
     }
   );
-
 
   if (
     forceScroll ||
@@ -2690,7 +3142,7 @@ function renderMessages(
 
 
 /* =========================================================
-   MESSAGE STATUS
+   MESSAGE STATE
 ========================================================= */
 
 function getMessageState(
@@ -2711,7 +3163,6 @@ function getMessageState(
     };
   }
 
-
   if (
     message.pending
   ) {
@@ -2725,7 +3176,6 @@ function getMessageState(
         "pending"
     };
   }
-
 
   if (
     message.read_at
@@ -2741,7 +3191,6 @@ function getMessageState(
     };
   }
 
-
   return {
 
     text:
@@ -2750,6 +3199,122 @@ function getMessageState(
     className:
       "sent"
   };
+}
+
+
+/* =========================================================
+   MESSAGE MENU
+========================================================= */
+
+function openMessageMenu(
+  event,
+  message
+) {
+
+  selectedMessage = {
+    ...message
+  };
+
+  menuEdit.classList.toggle(
+    "hidden",
+    message.sender_id !==
+      currentUser.id
+  );
+
+  menuDelete.classList.toggle(
+    "hidden",
+    message.sender_id !==
+      currentUser.id
+  );
+
+  messageMenuBackdrop
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  messageMenu
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  /*
+   * Desktop: dekat bubble.
+   * Mobile diatur CSS menjadi bottom sheet.
+   */
+  if (
+    window.innerWidth > 700
+  ) {
+
+    const rect =
+      event.currentTarget
+        .getBoundingClientRect();
+
+    const menuWidth = 190;
+    const estimatedHeight = 210;
+
+    let left =
+      rect.left;
+
+    if (
+      left + menuWidth >
+      window.innerWidth - 10
+    ) {
+
+      left =
+        window.innerWidth -
+        menuWidth -
+        10;
+    }
+
+    left =
+      Math.max(
+        10,
+        left
+      );
+
+    let top =
+      rect.bottom + 5;
+
+    if (
+      top + estimatedHeight >
+      window.innerHeight
+    ) {
+
+      top =
+        Math.max(
+          10,
+          rect.top -
+          estimatedHeight
+        );
+    }
+
+    messageMenu.style.left =
+      left + "px";
+
+    messageMenu.style.top =
+      top + "px";
+  }
+}
+
+
+function closeMessageMenu() {
+
+  selectedMessage = null;
+
+  messageMenu.classList.add(
+    "hidden"
+  );
+
+  messageMenuBackdrop
+    .classList
+    .add(
+      "hidden"
+    );
+
+  messageMenu.style.left = "";
+  messageMenu.style.top = "";
 }
 
 
@@ -2765,11 +3330,11 @@ function startReply(
     return;
   }
 
+  cancelEdit();
 
   replyingTo = {
     ...message
   };
-
 
   activeReplyTitle.textContent =
     message.sender_id ===
@@ -2778,15 +3343,12 @@ function startReply(
       : "Reply ke " +
         currentPartner.name;
 
-
   activeReplyText.textContent =
     message.content;
-
 
   activeReply.classList.remove(
     "hidden"
   );
-
 
   messageInput.focus();
 }
@@ -2796,14 +3358,813 @@ function cancelReply() {
 
   replyingTo = null;
 
-
   activeReply.classList.add(
     "hidden"
   );
 
+  activeReplyText.textContent = "";
+}
 
-  activeReplyText.textContent =
-    "";
+
+/* =========================================================
+   EMOJI
+========================================================= */
+
+function toggleEmojiPanel() {
+
+  emojiPanel.classList.toggle(
+    "hidden"
+  );
+}
+
+
+function closeEmojiPanel() {
+
+  emojiPanel.classList.add(
+    "hidden"
+  );
+}
+
+
+function insertEmoji(
+  emoji
+) {
+
+  const start =
+    messageInput.selectionStart;
+
+  const end =
+    messageInput.selectionEnd;
+
+  messageInput.setRangeText(
+    emoji,
+    start,
+    end,
+    "end"
+  );
+
+  messageInput.focus();
+
+  autoResizeMessageInput();
+
+  handleLocalTyping();
+}
+
+
+/* =========================================================
+   TEXTAREA AUTO RESIZE
+========================================================= */
+
+function autoResizeMessageInput() {
+
+  messageInput.style.height =
+    "auto";
+
+  messageInput.style.height =
+    Math.min(
+      messageInput.scrollHeight,
+      120
+    ) + "px";
+}
+
+
+/* =========================================================
+   SHARED WALLPAPER
+========================================================= */
+
+function makeRoomId(
+  a,
+  b
+) {
+
+  return [
+    a,
+    b
+  ]
+    .sort()
+    .join("_");
+}
+
+
+function getRoomUsers() {
+
+  const ids = [
+    currentUser.id,
+    currentPartner.id
+  ].sort();
+
+  return {
+    user1: ids[0],
+    user2: ids[1]
+  };
+}
+
+
+async function ensureRoomSettings() {
+
+  if (
+    !currentUser ||
+    !currentPartner ||
+    !currentRoomId
+  ) {
+    return;
+  }
+
+  const roomIdSnapshot =
+    currentRoomId;
+
+  const {
+    user1,
+    user2
+  } =
+    getRoomUsers();
+
+  /*
+   * Buat room bila belum ada.
+   */
+  const {
+    error: insertError
+  } =
+    await supabaseClient
+      .from("room_settings")
+      .upsert(
+        {
+
+          room_id:
+            roomIdSnapshot,
+
+          user_1:
+            user1,
+
+          user_2:
+            user2
+        },
+        {
+
+          onConflict:
+            "room_id",
+
+          ignoreDuplicates:
+            true
+        }
+      );
+
+  if (insertError) {
+
+    console.error(
+      "Room settings create:",
+      insertError
+    );
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from("room_settings")
+      .select("*")
+      .eq(
+        "room_id",
+        roomIdSnapshot
+      )
+      .maybeSingle();
+
+  if (error) {
+
+    console.error(
+      "Room settings:",
+      error
+    );
+
+    return;
+  }
+
+  if (
+    currentRoomId !==
+      roomIdSnapshot
+  ) {
+    return;
+  }
+
+  currentRoomSettings =
+    data || null;
+
+  applyRoomWallpaper(
+    currentRoomSettings
+      ? currentRoomSettings
+          .wallpaper_path
+      : null
+  );
+}
+
+
+function handleRoomSettingsRealtime(
+  payload
+) {
+
+  const row =
+    payload.new ||
+    payload.old;
+
+  if (
+    !row ||
+    !currentRoomId ||
+    row.room_id !==
+      currentRoomId
+  ) {
+    return;
+  }
+
+  if (
+    payload.eventType ===
+      "DELETE"
+  ) {
+
+    currentRoomSettings = null;
+
+    applyRoomWallpaper(
+      null
+    );
+
+    return;
+  }
+
+  currentRoomSettings = {
+    ...row
+  };
+
+  applyRoomWallpaper(
+    row.wallpaper_path
+  );
+}
+
+
+function getWallpaperPublicUrl(
+  path
+) {
+
+  if (!path) {
+    return "";
+  }
+
+  const {
+    data
+  } =
+    supabaseClient
+      .storage
+      .from(
+        "chat-wallpapers"
+      )
+      .getPublicUrl(
+        path
+      );
+
+  return data
+    ? data.publicUrl
+    : "";
+}
+
+
+function applyRoomWallpaper(
+  path
+) {
+
+  if (!path) {
+
+    resetWallpaper();
+
+    return;
+  }
+
+  const url =
+    getWallpaperPublicUrl(
+      path
+    );
+
+  if (!url) {
+
+    resetWallpaper();
+
+    return;
+  }
+
+  messagesElement.style.backgroundImage =
+    `url("${url}")`;
+}
+
+
+function resetWallpaper() {
+
+  messagesElement.style.backgroundImage =
+    "none";
+}
+
+
+function openWallpaperModal() {
+
+  if (!currentPartner) {
+    return;
+  }
+
+  selectedWallpaperFile = null;
+
+  clearWallpaperPreviewUrl();
+
+  wallpaperStatus.textContent = "";
+
+  saveWallpaperButton
+    .classList
+    .add(
+      "hidden"
+    );
+
+  renderWallpaperModalPreview();
+
+  wallpaperModal
+    .classList
+    .remove(
+      "hidden"
+    );
+}
+
+
+function closeWallpaperDialog() {
+
+  wallpaperModal
+    .classList
+    .add(
+      "hidden"
+    );
+
+  selectedWallpaperFile = null;
+
+  clearWallpaperPreviewUrl();
+
+  wallpaperInput.value = "";
+
+  wallpaperStatus.textContent = "";
+
+  saveWallpaperButton
+    .classList
+    .add(
+      "hidden"
+    );
+}
+
+
+function renderWallpaperModalPreview() {
+
+  wallpaperPreview.style.backgroundImage =
+    "none";
+
+  wallpaperPreview.innerHTML =
+    "<span>Belum ada wallpaper</span>";
+
+  if (
+    selectedWallpaperPreviewUrl
+  ) {
+
+    wallpaperPreview.innerHTML = "";
+
+    wallpaperPreview.style.backgroundImage =
+      `url("${selectedWallpaperPreviewUrl}")`;
+
+    return;
+  }
+
+  if (
+    currentRoomSettings &&
+    currentRoomSettings
+      .wallpaper_path
+  ) {
+
+    const url =
+      getWallpaperPublicUrl(
+        currentRoomSettings
+          .wallpaper_path
+      );
+
+    wallpaperPreview.innerHTML = "";
+
+    wallpaperPreview.style.backgroundImage =
+      `url("${url}")`;
+  }
+}
+
+
+function handleWallpaperSelection() {
+
+  const file =
+    wallpaperInput
+      .files[0];
+
+  if (!file) {
+    return;
+  }
+
+  const allowed = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif"
+  ];
+
+  if (
+    !allowed.includes(
+      file.type
+    )
+  ) {
+
+    alert(
+      "Format wallpaper harus JPG, PNG, WEBP, atau GIF."
+    );
+
+    wallpaperInput.value = "";
+
+    return;
+  }
+
+  if (
+    file.size >
+    5 * 1024 * 1024
+  ) {
+
+    alert(
+      "Ukuran wallpaper maksimal 5 MB."
+    );
+
+    wallpaperInput.value = "";
+
+    return;
+  }
+
+  selectedWallpaperFile =
+    file;
+
+  clearWallpaperPreviewUrl();
+
+  selectedWallpaperPreviewUrl =
+    URL.createObjectURL(
+      file
+    );
+
+  renderWallpaperModalPreview();
+
+  saveWallpaperButton
+    .classList
+    .remove(
+      "hidden"
+    );
+}
+
+
+function clearWallpaperPreviewUrl() {
+
+  if (
+    selectedWallpaperPreviewUrl
+  ) {
+
+    URL.revokeObjectURL(
+      selectedWallpaperPreviewUrl
+    );
+
+    selectedWallpaperPreviewUrl =
+      null;
+  }
+}
+
+
+async function saveWallpaper() {
+
+  if (
+    !selectedWallpaperFile ||
+    !currentRoomId
+  ) {
+    return;
+  }
+
+  saveWallpaperButton.disabled =
+    true;
+
+  chooseWallpaperButton.disabled =
+    true;
+
+  wallpaperStatus.textContent =
+    "Mengupload wallpaper...";
+
+  const oldPath =
+    currentRoomSettings
+      ? currentRoomSettings
+          .wallpaper_path
+      : null;
+
+  try {
+
+    const extension =
+      getFileExtension(
+        selectedWallpaperFile
+      );
+
+    const path =
+      currentRoomId +
+      "/" +
+      Date.now() +
+      "-" +
+      crypto.randomUUID() +
+      "." +
+      extension;
+
+    const {
+      error: uploadError
+    } =
+      await supabaseClient
+        .storage
+        .from(
+          "chat-wallpapers"
+        )
+        .upload(
+          path,
+          selectedWallpaperFile,
+          {
+            cacheControl:
+              "3600",
+
+            upsert:
+              false
+          }
+        );
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const {
+      data,
+      error: updateError
+    } =
+      await supabaseClient
+        .from(
+          "room_settings"
+        )
+        .update({
+
+          wallpaper_path:
+            path,
+
+          updated_at:
+            new Date()
+              .toISOString()
+        })
+        .eq(
+          "room_id",
+          currentRoomId
+        )
+        .select()
+        .single();
+
+    if (updateError) {
+
+      /*
+       * Jangan tinggalkan file baru
+       * bila database gagal.
+       */
+      await supabaseClient
+        .storage
+        .from(
+          "chat-wallpapers"
+        )
+        .remove([
+          path
+        ]);
+
+      throw updateError;
+    }
+
+    currentRoomSettings =
+      data;
+
+    applyRoomWallpaper(
+      path
+    );
+
+    /*
+     * Hapus wallpaper lama setelah
+     * database berhasil menunjuk file baru.
+     */
+    if (
+      oldPath &&
+      oldPath !== path
+    ) {
+
+      await supabaseClient
+        .storage
+        .from(
+          "chat-wallpapers"
+        )
+        .remove([
+          oldPath
+        ]);
+    }
+
+    wallpaperStatus.textContent =
+      "Wallpaper berhasil diterapkan.";
+
+    selectedWallpaperFile = null;
+
+    clearWallpaperPreviewUrl();
+
+    wallpaperInput.value = "";
+
+    saveWallpaperButton
+      .classList
+      .add(
+        "hidden"
+      );
+
+    renderWallpaperModalPreview();
+
+  } catch (error) {
+
+    console.error(
+      "Wallpaper:",
+      error
+    );
+
+    wallpaperStatus.textContent =
+      "Wallpaper gagal diterapkan.";
+
+  } finally {
+
+    saveWallpaperButton.disabled =
+      false;
+
+    chooseWallpaperButton.disabled =
+      false;
+  }
+}
+
+
+async function removeWallpaper() {
+
+  if (
+    !currentRoomId
+  ) {
+    return;
+  }
+
+  const oldPath =
+    currentRoomSettings
+      ? currentRoomSettings
+          .wallpaper_path
+      : null;
+
+  if (!oldPath) {
+
+    resetWallpaper();
+
+    wallpaperStatus.textContent =
+      "Wallpaper sudah kosong.";
+
+    return;
+  }
+
+  const ok =
+    confirm(
+      "Hapus wallpaper room ini?"
+    );
+
+  if (!ok) {
+    return;
+  }
+
+  removeWallpaperButton.disabled =
+    true;
+
+  wallpaperStatus.textContent =
+    "Menghapus wallpaper...";
+
+  try {
+
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .from(
+          "room_settings"
+        )
+        .update({
+
+          wallpaper_path:
+            null,
+
+          updated_at:
+            new Date()
+              .toISOString()
+        })
+        .eq(
+          "room_id",
+          currentRoomId
+        )
+        .select()
+        .single();
+
+    if (error) {
+      throw error;
+    }
+
+    currentRoomSettings =
+      data;
+
+    resetWallpaper();
+
+    await supabaseClient
+      .storage
+      .from(
+        "chat-wallpapers"
+      )
+      .remove([
+        oldPath
+      ]);
+
+    wallpaperStatus.textContent =
+      "Wallpaper dihapus.";
+
+    renderWallpaperModalPreview();
+
+  } catch (error) {
+
+    console.error(
+      "Remove wallpaper:",
+      error
+    );
+
+    wallpaperStatus.textContent =
+      "Wallpaper gagal dihapus.";
+
+  } finally {
+
+    removeWallpaperButton.disabled =
+      false;
+  }
+}
+
+
+function getFileExtension(
+  file
+) {
+
+  const name =
+    String(
+      file.name || ""
+    );
+
+  const extension =
+    name
+      .split(".")
+      .pop()
+      .toLowerCase();
+
+  const safe = [
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "gif"
+  ];
+
+  if (
+    safe.includes(
+      extension
+    )
+  ) {
+
+    return extension;
+  }
+
+  if (
+    file.type ===
+      "image/png"
+  ) {
+    return "png";
+  }
+
+  if (
+    file.type ===
+      "image/webp"
+  ) {
+    return "webp";
+  }
+
+  if (
+    file.type ===
+      "image/gif"
+  ) {
+    return "gif";
+  }
+
+  return "jpg";
 }
 
 
@@ -2817,22 +4178,15 @@ async function updateLastSeen() {
     return;
   }
 
-
   const now =
     new Date()
       .toISOString();
 
-
-  /*
-   * Update local supaya tampilan
-   * langsung punya waktu terbaru.
-   */
   if (currentProfile) {
 
     currentProfile.last_seen =
       now;
   }
-
 
   const {
     error
@@ -2843,13 +4197,11 @@ async function updateLastSeen() {
 
         last_seen:
           now
-
       })
       .eq(
         "id",
         currentUser.id
       );
-
 
   if (error) {
 
@@ -2872,22 +4224,16 @@ async function logout() {
       "Keluar dari akun?"
     );
 
-
   if (!ok) {
     return;
   }
 
+  await sendTypingState(
+    false
+  );
 
-  /*
-   * Simpan waktu terakhir aktif
-   * sebelum logout.
-   */
   await updateLastSeen();
 
-
-  /*
-   * Keluar dari Presence.
-   */
   if (presenceChannel) {
 
     try {
@@ -2904,45 +4250,29 @@ async function logout() {
     }
   }
 
-
   cleanupRealtime();
-
 
   clearInterval(
     lastSeenTimer
   );
-
 
   currentPartner = null;
 
   serverMessages = [];
   pendingMessages = [];
 
-
   await supabaseClient
     .auth
     .signOut();
-
 
   location.reload();
 }
 
 
 /* =========================================================
-   SAVE LAST SEEN WHEN LEAVING PAGE
+   PAGE HIDE
 ========================================================= */
 
-/*
- * pagehide dipanggil saat user:
- * - close tab
- * - pindah halaman
- * - browser meninggalkan halaman
- *
- * Kita coba update last_seen.
- *
- * Presence tetap yang menentukan
- * ONLINE / OFFLINE.
- */
 window.addEventListener(
   "pagehide",
   () => {
@@ -2951,36 +4281,27 @@ window.addEventListener(
       return;
     }
 
-
     /*
-     * Tidak perlu await karena halaman
-     * sedang ditutup.
+     * Presence/WebSocket akan terputus
+     * otomatis.
+     *
+     * Tidak mengandalkan HTTP request
+     * pagehide untuk status online.
      */
-    supabaseClient
-      .from("profiles")
-      .update({
+    if (presenceChannel) {
 
-        last_seen:
-          new Date()
-            .toISOString()
-
-      })
-      .eq(
-        "id",
-        currentUser.id
-      );
-
-
-    /*
-     * Presence akan otomatis terputus
-     * ketika websocket disconnect.
-     */
+      presenceChannel
+        .untrack()
+        .catch(
+          () => {}
+        );
+    }
   }
 );
 
 
 /* =========================================================
-   PREVIEW TEXT
+   PREVIEW
 ========================================================= */
 
 function getPreviewText(
@@ -2991,14 +4312,12 @@ function getPreviewText(
     return "";
   }
 
-
   if (
     message.type === "image"
   ) {
 
     return "📷 Foto";
   }
-
 
   const content =
     String(
@@ -3010,12 +4329,9 @@ function getPreviewText(
       )
       .trim();
 
-
   if (!content) {
-
     return "Pesan";
   }
-
 
   if (
     content.length > 45
@@ -3029,7 +4345,6 @@ function getPreviewText(
     );
   }
 
-
   return content;
 }
 
@@ -3038,7 +4353,9 @@ function getPreviewText(
    HELPERS
 ========================================================= */
 
-function getInitial(name) {
+function getInitial(
+  name
+) {
 
   return name
     ? name
@@ -3049,48 +4366,41 @@ function getInitial(name) {
 }
 
 
-function formatTime(value) {
+function formatTime(
+  value
+) {
 
   if (!value) {
     return "";
   }
 
-
   const date =
     new Date(value);
-
 
   return date
     .toLocaleTimeString(
       "id-ID",
       {
-
         hour:
           "2-digit",
 
         minute:
           "2-digit"
-
       }
     );
 }
 
 
-/* =========================================================
-   FORMAT LAST SEEN
-========================================================= */
-
-function formatLastSeen(value) {
+function formatLastSeen(
+  value
+) {
 
   if (!value) {
-
     return "Offline";
   }
 
-
   const date =
     new Date(value);
-
 
   const diff =
     Math.max(
@@ -3099,23 +4409,10 @@ function formatLastSeen(value) {
         date.getTime()
     );
 
-
   const seconds =
     Math.floor(
       diff / 1000
     );
-
-
-  /*
-   * PENTING:
-   *
-   * Tidak ada lagi:
-   * diff < 30 detik = Online
-   *
-   * Online sekarang HANYA ditentukan
-   * oleh Presence.
-   */
-
 
   if (
     seconds < 60
@@ -3124,12 +4421,10 @@ function formatLastSeen(value) {
     return "Baru saja aktif";
   }
 
-
   const minutes =
     Math.floor(
       seconds / 60
     );
-
 
   if (
     minutes < 60
@@ -3142,12 +4437,10 @@ function formatLastSeen(value) {
     );
   }
 
-
   const hours =
     Math.floor(
       minutes / 60
     );
-
 
   if (
     hours < 24
@@ -3160,13 +4453,11 @@ function formatLastSeen(value) {
     );
   }
 
-
   return (
     "Terakhir aktif " +
     date.toLocaleString(
       "id-ID",
       {
-
         day:
           "2-digit",
 
@@ -3178,7 +4469,6 @@ function formatLastSeen(value) {
 
         minute:
           "2-digit"
-
       }
     )
   );
@@ -3214,7 +4504,7 @@ function setRegisterError(
 
 
 /* =========================================================
-   EVENTS
+   AUTH EVENTS
 ========================================================= */
 
 showRegisterButton
@@ -3223,13 +4513,11 @@ showRegisterButton
     showRegister
   );
 
-
 showLoginButton
   .addEventListener(
     "click",
     showLogin
   );
-
 
 registerButton
   .addEventListener(
@@ -3237,13 +4525,11 @@ registerButton
     registerAccount
   );
 
-
 loginButton
   .addEventListener(
     "click",
     loginAccount
   );
-
 
 loginPassword
   .addEventListener(
@@ -3258,7 +4544,6 @@ loginPassword
       }
     }
   );
-
 
 registerPassword2
   .addEventListener(
@@ -3275,6 +4560,10 @@ registerPassword2
   );
 
 
+/* =========================================================
+   CHAT EVENTS
+========================================================= */
+
 sendButton
   .addEventListener(
     "click",
@@ -3284,16 +4573,59 @@ sendButton
 
 messageInput
   .addEventListener(
+    "input",
+    () => {
+
+      autoResizeMessageInput();
+
+      handleLocalTyping();
+    }
+  );
+
+
+messageInput
+  .addEventListener(
     "keydown",
     event => {
 
+      /*
+       * Enter biasa:
+       * newline.
+       *
+       * Ctrl + Enter:
+       * send.
+       *
+       * Cmd + Enter:
+       * send.
+       */
       if (
         event.key === "Enter"
+        &&
+        (
+          event.ctrlKey ||
+          event.metaKey
+        )
       ) {
 
         event.preventDefault();
 
         sendMessage();
+      }
+
+      if (
+        event.key === "Escape"
+      ) {
+
+        if (editingMessage) {
+
+          cancelEdit();
+
+        } else if (
+          replyingTo
+        ) {
+
+          cancelReply();
+        }
       }
     }
   );
@@ -3303,6 +4635,13 @@ cancelReplyButton
   .addEventListener(
     "click",
     cancelReply
+  );
+
+
+cancelEditButton
+  .addEventListener(
+    "click",
+    cancelEdit
   );
 
 
@@ -3321,35 +4660,248 @@ logoutButton
 
 
 /* =========================================================
-   TAB ACTIVE
+   EMOJI EVENTS
+========================================================= */
+
+emojiButton
+  .addEventListener(
+    "click",
+    event => {
+
+      event.stopPropagation();
+
+      toggleEmojiPanel();
+    }
+  );
+
+
+emojiPanel
+  .querySelectorAll(
+    "button"
+  )
+  .forEach(
+    button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          insertEmoji(
+            button.textContent
+          );
+        }
+      );
+    }
+  );
+
+
+/* =========================================================
+   MESSAGE MENU EVENTS
+========================================================= */
+
+messageMenuBackdrop
+  .addEventListener(
+    "click",
+    closeMessageMenu
+  );
+
+
+menuReply
+  .addEventListener(
+    "click",
+    () => {
+
+      const message =
+        selectedMessage;
+
+      closeMessageMenu();
+
+      if (message) {
+
+        startReply(
+          message
+        );
+      }
+    }
+  );
+
+
+menuCopy
+  .addEventListener(
+    "click",
+    async () => {
+
+      const message =
+        selectedMessage;
+
+      closeMessageMenu();
+
+      if (message) {
+
+        await copyMessage(
+          message
+        );
+      }
+    }
+  );
+
+
+menuEdit
+  .addEventListener(
+    "click",
+    () => {
+
+      const message =
+        selectedMessage;
+
+      closeMessageMenu();
+
+      if (message) {
+
+        startEdit(
+          message
+        );
+      }
+    }
+  );
+
+
+menuDelete
+  .addEventListener(
+    "click",
+    async () => {
+
+      const message =
+        selectedMessage;
+
+      closeMessageMenu();
+
+      if (message) {
+
+        await deleteMessage(
+          message
+        );
+      }
+    }
+  );
+
+
+/* =========================================================
+   WALLPAPER EVENTS
+========================================================= */
+
+wallpaperButton
+  .addEventListener(
+    "click",
+    openWallpaperModal
+  );
+
+
+closeWallpaperModal
+  .addEventListener(
+    "click",
+    closeWallpaperDialog
+  );
+
+
+wallpaperModal
+  .addEventListener(
+    "click",
+    event => {
+
+      if (
+        event.target ===
+          wallpaperModal
+      ) {
+
+        closeWallpaperDialog();
+      }
+    }
+  );
+
+
+chooseWallpaperButton
+  .addEventListener(
+    "click",
+    () => {
+
+      wallpaperInput.click();
+    }
+  );
+
+
+wallpaperInput
+  .addEventListener(
+    "change",
+    handleWallpaperSelection
+  );
+
+
+saveWallpaperButton
+  .addEventListener(
+    "click",
+    saveWallpaper
+  );
+
+
+removeWallpaperButton
+  .addEventListener(
+    "click",
+    removeWallpaper
+  );
+
+
+/* =========================================================
+   GLOBAL CLICK
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    if (
+      !emojiPanel
+        .classList
+        .contains(
+          "hidden"
+        )
+      &&
+      !emojiPanel.contains(
+        event.target
+      )
+      &&
+      event.target !==
+        emojiButton
+    ) {
+
+      closeEmojiPanel();
+    }
+  }
+);
+
+
+/* =========================================================
+   VISIBILITY
 ========================================================= */
 
 document.addEventListener(
   "visibilitychange",
   async () => {
 
-    /*
-     * Tab kembali aktif.
-     */
     if (
       document.visibilityState ===
         "visible"
     ) {
 
-      /*
-       * Simpan waktu aktif terbaru.
-       */
       await updateLastSeen();
 
-
-      /*
-       * Safety sync conversation.
-       */
       if (
         currentPartner &&
-        appScreen.classList.contains(
-          "chat-open"
-        )
+        appScreen
+          .classList
+          .contains(
+            "chat-open"
+          )
       ) {
 
         await loadMessages();
@@ -3357,14 +4909,19 @@ document.addEventListener(
         await markAsRead();
       }
 
-
-      /*
-       * Refresh sidebar/unread.
-       */
       await loadUsers();
 
-
       refreshStatusDisplay();
+
+    } else {
+
+      /*
+       * Jangan biarkan typing nyangkut
+       * ketika user pindah tab.
+       */
+      await sendTypingState(
+        false
+      );
     }
   }
 );
