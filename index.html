@@ -14,7 +14,13 @@
     content="#075e54"
   >
 
-  <title>Private Chat Realtime</title>
+  <title>Private Chat</title>
+
+  <link
+    id="appFavicon"
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E"
+  >
 
   <link
     rel="stylesheet"
@@ -109,8 +115,7 @@
         </h2>
 
         <p>
-          Akun bisa digunakan
-          di perangkat lain.
+          Akun bisa digunakan di perangkat lain.
         </p>
 
         <input
@@ -225,15 +230,19 @@
         id="userList"
         class="user-list"
       >
+
         <div class="center-info">
           Memuat pengguna...
         </div>
+
       </div>
 
     </aside>
 
 
-    <!-- CHAT -->
+    <!-- =========================
+         CHAT
+    ========================== -->
 
     <main class="chat-panel">
 
@@ -251,8 +260,7 @@
         </h2>
 
         <p>
-          Pilih pengguna untuk
-          mulai percakapan.
+          Pilih pengguna untuk mulai percakapan.
         </p>
 
       </div>
@@ -263,12 +271,15 @@
         class="conversation hidden"
       >
 
+        <!-- CHAT HEADER -->
+
         <header class="chat-header">
 
           <button
             id="backButton"
             class="back-button"
             type="button"
+            aria-label="Kembali"
           >
             ←
           </button>
@@ -297,8 +308,23 @@
 
           </div>
 
+
+          <!-- WALLPAPER BUTTON -->
+
+          <button
+            id="wallpaperButton"
+            class="chat-header-button"
+            type="button"
+            title="Wallpaper"
+            aria-label="Wallpaper"
+          >
+            🖼️
+          </button>
+
         </header>
 
+
+        <!-- MESSAGES -->
 
         <div
           id="messages"
@@ -306,7 +332,7 @@
         ></div>
 
 
-        <!-- REPLY -->
+        <!-- ACTIVE REPLY -->
 
         <div
           id="activeReply"
@@ -340,21 +366,100 @@
         </div>
 
 
+        <!-- EDIT MODE -->
+
+        <div
+          id="activeEdit"
+          class="active-edit hidden"
+        >
+
+          <div class="active-edit-content">
+
+            <div class="active-edit-title">
+              ✏️ Edit pesan
+            </div>
+
+            <div
+              id="activeEditText"
+              class="active-edit-text"
+            ></div>
+
+          </div>
+
+          <button
+            id="cancelEditButton"
+            class="cancel-edit"
+            type="button"
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        <!-- EMOJI PANEL -->
+
+        <div
+          id="emojiPanel"
+          class="emoji-panel hidden"
+        >
+
+          <button type="button">😀</button>
+          <button type="button">😃</button>
+          <button type="button">😄</button>
+          <button type="button">😁</button>
+          <button type="button">😂</button>
+          <button type="button">🤣</button>
+          <button type="button">🥰</button>
+          <button type="button">😍</button>
+          <button type="button">😘</button>
+          <button type="button">🥺</button>
+          <button type="button">😭</button>
+          <button type="button">😢</button>
+          <button type="button">😡</button>
+          <button type="button">👍</button>
+          <button type="button">👎</button>
+          <button type="button">🙏</button>
+          <button type="button">🤗</button>
+          <button type="button">🎉</button>
+          <button type="button">🔥</button>
+          <button type="button">❤️</button>
+          <button type="button">💕</button>
+          <button type="button">💖</button>
+          <button type="button">🫶</button>
+          <button type="button">😎</button>
+          <button type="button">😴</button>
+
+        </div>
+
+
         <!-- COMPOSER -->
 
         <footer class="composer">
 
-          <input
+          <button
+            id="emojiButton"
+            class="emoji-button"
+            type="button"
+            aria-label="Emoji"
+            title="Emoji"
+          >
+            😀
+          </button>
+
+          <textarea
             id="messageInput"
-            type="text"
+            rows="1"
             maxlength="1000"
             placeholder="Ketik pesan..."
             autocomplete="off"
-          >
+          ></textarea>
 
           <button
             id="sendButton"
+            class="send-button"
             type="button"
+            aria-label="Kirim"
           >
             ➤
           </button>
@@ -368,7 +473,150 @@
   </section>
 
 
-  <!-- SUPABASE JS -->
+  <!-- =========================
+       MESSAGE MENU
+  ========================== -->
+
+  <div
+    id="messageMenuBackdrop"
+    class="message-menu-backdrop hidden"
+  ></div>
+
+  <div
+    id="messageMenu"
+    class="message-menu hidden"
+  >
+
+    <button
+      id="menuReply"
+      type="button"
+    >
+      <span>↩️</span>
+      Reply
+    </button>
+
+    <button
+      id="menuCopy"
+      type="button"
+    >
+      <span>📋</span>
+      Copy
+    </button>
+
+    <button
+      id="menuEdit"
+      type="button"
+    >
+      <span>✏️</span>
+      Edit
+    </button>
+
+    <button
+      id="menuDelete"
+      class="danger"
+      type="button"
+    >
+      <span>🗑️</span>
+      Delete
+    </button>
+
+  </div>
+
+
+  <!-- =========================
+       WALLPAPER MODAL
+  ========================== -->
+
+  <div
+    id="wallpaperModal"
+    class="modal-backdrop hidden"
+  >
+
+    <div class="wallpaper-modal">
+
+      <div class="modal-header">
+
+        <div>
+          <div class="modal-title">
+            Wallpaper Chat
+          </div>
+
+          <div class="modal-subtitle">
+            Wallpaper ini dipakai bersama di room ini.
+          </div>
+        </div>
+
+        <button
+          id="closeWallpaperModal"
+          class="modal-close"
+          type="button"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div
+        id="wallpaperPreview"
+        class="wallpaper-preview"
+      >
+
+        <span>
+          Preview wallpaper
+        </span>
+
+      </div>
+
+
+      <input
+        id="wallpaperInput"
+        class="hidden"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+      >
+
+
+      <div class="wallpaper-actions">
+
+        <button
+          id="chooseWallpaperButton"
+          class="primary-action"
+          type="button"
+        >
+          🖼️ Pilih Wallpaper
+        </button>
+
+        <button
+          id="saveWallpaperButton"
+          class="primary-action hidden"
+          type="button"
+        >
+          ✓ Terapkan
+        </button>
+
+        <button
+          id="removeWallpaperButton"
+          class="danger-action"
+          type="button"
+        >
+          Hapus Wallpaper
+        </button>
+
+      </div>
+
+
+      <div
+        id="wallpaperStatus"
+        class="wallpaper-status"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- SUPABASE -->
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
