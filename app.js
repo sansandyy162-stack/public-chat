@@ -1,29 +1,27 @@
 /* =========================================================
-   PRIVATE CHAT SUPABASE REALTIME V2.4
+   PRIVATE CHAT
+   SUPABASE REALTIME V2.4 FINAL
 
-   FITUR:
-   - Supabase Auth
-   - Realtime message
-   - Optimistic message
-   - Realtime unread
-   - Read receipt
+   - Realtime Message
+   - Realtime Unread
+   - Read Receipt
    - Presence Online / Offline
-   - Last Seen heartbeat
-   - Typing indicator
+   - Last Seen Heartbeat
+   - Typing Indicator
    - Reply
    - Copy
    - Edit
    - Delete
-   - Emoji picker
-   - Multiline message
-   - Ctrl/Cmd + Enter = Send
-   - Shared realtime wallpaper
-   - Browser tab notification dot
+   - Emoji
+   - Enter = Send
+   - Shift + Enter = New Line
+   - Shared Wallpaper
+   - Browser Tab Notification
 ========================================================= */
 
 
 /* =========================================================
-   SUPABASE
+   SUPABASE CONFIG
 ========================================================= */
 
 const SUPABASE_URL =
@@ -40,10 +38,11 @@ const supabaseClient =
 
 
 /* =========================================================
-   CONSTANT
+   APP CONSTANTS
 ========================================================= */
 
-const APP_TITLE = "Private Chat";
+const APP_TITLE =
+  "Private Chat";
 
 const DEFAULT_FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
@@ -72,7 +71,8 @@ let selectedMessage = null;
 let realtimeChannel = null;
 let presenceChannel = null;
 
-let onlineUsers = new Set();
+let onlineUsers =
+  new Set();
 
 let lastSeenTimer = null;
 
@@ -94,166 +94,274 @@ let selectedWallpaperPreviewUrl = null;
 ========================================================= */
 
 const loginScreen =
-  document.getElementById("loginScreen");
+  document.getElementById(
+    "loginScreen"
+  );
 
 const appScreen =
-  document.getElementById("appScreen");
+  document.getElementById(
+    "appScreen"
+  );
 
 const loginForm =
-  document.getElementById("loginForm");
+  document.getElementById(
+    "loginForm"
+  );
 
 const registerForm =
-  document.getElementById("registerForm");
+  document.getElementById(
+    "registerForm"
+  );
 
 const loginEmail =
-  document.getElementById("loginEmail");
+  document.getElementById(
+    "loginEmail"
+  );
 
 const loginPassword =
-  document.getElementById("loginPassword");
+  document.getElementById(
+    "loginPassword"
+  );
 
 const loginButton =
-  document.getElementById("loginButton");
+  document.getElementById(
+    "loginButton"
+  );
 
 const loginStatus =
-  document.getElementById("loginStatus");
+  document.getElementById(
+    "loginStatus"
+  );
 
 const registerName =
-  document.getElementById("registerName");
+  document.getElementById(
+    "registerName"
+  );
 
 const registerEmail =
-  document.getElementById("registerEmail");
+  document.getElementById(
+    "registerEmail"
+  );
 
 const registerPassword =
-  document.getElementById("registerPassword");
+  document.getElementById(
+    "registerPassword"
+  );
 
 const registerPassword2 =
-  document.getElementById("registerPassword2");
+  document.getElementById(
+    "registerPassword2"
+  );
 
 const registerButton =
-  document.getElementById("registerButton");
+  document.getElementById(
+    "registerButton"
+  );
 
 const registerStatus =
-  document.getElementById("registerStatus");
+  document.getElementById(
+    "registerStatus"
+  );
 
 const showRegisterButton =
-  document.getElementById("showRegisterButton");
+  document.getElementById(
+    "showRegisterButton"
+  );
 
 const showLoginButton =
-  document.getElementById("showLoginButton");
+  document.getElementById(
+    "showLoginButton"
+  );
 
 const myName =
-  document.getElementById("myName");
+  document.getElementById(
+    "myName"
+  );
 
 const myEmail =
-  document.getElementById("myEmail");
+  document.getElementById(
+    "myEmail"
+  );
 
 const logoutButton =
-  document.getElementById("logoutButton");
+  document.getElementById(
+    "logoutButton"
+  );
 
 const userList =
-  document.getElementById("userList");
+  document.getElementById(
+    "userList"
+  );
 
 const emptyChat =
-  document.getElementById("emptyChat");
+  document.getElementById(
+    "emptyChat"
+  );
 
 const conversation =
-  document.getElementById("conversation");
+  document.getElementById(
+    "conversation"
+  );
 
 const partnerName =
-  document.getElementById("partnerName");
+  document.getElementById(
+    "partnerName"
+  );
 
 const partnerInitial =
-  document.getElementById("partnerInitial");
+  document.getElementById(
+    "partnerInitial"
+  );
 
 const partnerStatus =
-  document.getElementById("partnerStatus");
+  document.getElementById(
+    "partnerStatus"
+  );
 
 const backButton =
-  document.getElementById("backButton");
+  document.getElementById(
+    "backButton"
+  );
 
 const messagesElement =
-  document.getElementById("messages");
+  document.getElementById(
+    "messages"
+  );
 
 const messageInput =
-  document.getElementById("messageInput");
+  document.getElementById(
+    "messageInput"
+  );
 
 const sendButton =
-  document.getElementById("sendButton");
+  document.getElementById(
+    "sendButton"
+  );
 
 const activeReply =
-  document.getElementById("activeReply");
+  document.getElementById(
+    "activeReply"
+  );
 
 const activeReplyTitle =
-  document.getElementById("activeReplyTitle");
+  document.getElementById(
+    "activeReplyTitle"
+  );
 
 const activeReplyText =
-  document.getElementById("activeReplyText");
+  document.getElementById(
+    "activeReplyText"
+  );
 
 const cancelReplyButton =
-  document.getElementById("cancelReplyButton");
+  document.getElementById(
+    "cancelReplyButton"
+  );
 
 const activeEdit =
-  document.getElementById("activeEdit");
+  document.getElementById(
+    "activeEdit"
+  );
 
 const activeEditText =
-  document.getElementById("activeEditText");
+  document.getElementById(
+    "activeEditText"
+  );
 
 const cancelEditButton =
-  document.getElementById("cancelEditButton");
+  document.getElementById(
+    "cancelEditButton"
+  );
 
 const emojiButton =
-  document.getElementById("emojiButton");
+  document.getElementById(
+    "emojiButton"
+  );
 
 const emojiPanel =
-  document.getElementById("emojiPanel");
+  document.getElementById(
+    "emojiPanel"
+  );
 
 const messageMenu =
-  document.getElementById("messageMenu");
+  document.getElementById(
+    "messageMenu"
+  );
 
 const messageMenuBackdrop =
-  document.getElementById("messageMenuBackdrop");
+  document.getElementById(
+    "messageMenuBackdrop"
+  );
 
 const menuReply =
-  document.getElementById("menuReply");
+  document.getElementById(
+    "menuReply"
+  );
 
 const menuCopy =
-  document.getElementById("menuCopy");
+  document.getElementById(
+    "menuCopy"
+  );
 
 const menuEdit =
-  document.getElementById("menuEdit");
+  document.getElementById(
+    "menuEdit"
+  );
 
 const menuDelete =
-  document.getElementById("menuDelete");
+  document.getElementById(
+    "menuDelete"
+  );
 
 const wallpaperButton =
-  document.getElementById("wallpaperButton");
+  document.getElementById(
+    "wallpaperButton"
+  );
 
 const wallpaperModal =
-  document.getElementById("wallpaperModal");
+  document.getElementById(
+    "wallpaperModal"
+  );
 
 const closeWallpaperModal =
-  document.getElementById("closeWallpaperModal");
+  document.getElementById(
+    "closeWallpaperModal"
+  );
 
 const wallpaperInput =
-  document.getElementById("wallpaperInput");
+  document.getElementById(
+    "wallpaperInput"
+  );
 
 const chooseWallpaperButton =
-  document.getElementById("chooseWallpaperButton");
+  document.getElementById(
+    "chooseWallpaperButton"
+  );
 
 const saveWallpaperButton =
-  document.getElementById("saveWallpaperButton");
+  document.getElementById(
+    "saveWallpaperButton"
+  );
 
 const removeWallpaperButton =
-  document.getElementById("removeWallpaperButton");
+  document.getElementById(
+    "removeWallpaperButton"
+  );
 
 const wallpaperPreview =
-  document.getElementById("wallpaperPreview");
+  document.getElementById(
+    "wallpaperPreview"
+  );
 
 const wallpaperStatus =
-  document.getElementById("wallpaperStatus");
+  document.getElementById(
+    "wallpaperStatus"
+  );
 
 const appFavicon =
-  document.getElementById("appFavicon");
+  document.getElementById(
+    "appFavicon"
+  );
 
 
 /* =========================================================
@@ -303,7 +411,8 @@ async function init() {
       ) => {
 
         if (
-          event === "SIGNED_OUT"
+          event ===
+          "SIGNED_OUT"
         ) {
 
           cleanupRealtime();
@@ -346,27 +455,36 @@ async function init() {
 
 function showLogin() {
 
-  loginScreen.classList.remove(
-    "hidden"
-  );
+  loginScreen
+    .classList
+    .remove(
+      "hidden"
+    );
 
-  appScreen.classList.add(
-    "hidden"
-  );
+  appScreen
+    .classList
+    .add(
+      "hidden"
+    );
 
-  loginForm.classList.remove(
-    "hidden"
-  );
+  loginForm
+    .classList
+    .remove(
+      "hidden"
+    );
 
-  registerForm.classList.add(
-    "hidden"
-  );
+  registerForm
+    .classList
+    .add(
+      "hidden"
+    );
 
   loginStatus.textContent = "";
   registerStatus.textContent = "";
 
   setTimeout(
-    () => loginEmail.focus(),
+    () =>
+      loginEmail.focus(),
     100
   );
 }
@@ -374,19 +492,24 @@ function showLogin() {
 
 function showRegister() {
 
-  loginForm.classList.add(
-    "hidden"
-  );
+  loginForm
+    .classList
+    .add(
+      "hidden"
+    );
 
-  registerForm.classList.remove(
-    "hidden"
-  );
+  registerForm
+    .classList
+    .remove(
+      "hidden"
+    );
 
   loginStatus.textContent = "";
   registerStatus.textContent = "";
 
   setTimeout(
-    () => registerName.focus(),
+    () =>
+      registerName.focus(),
     100
   );
 }
@@ -399,7 +522,9 @@ function showRegister() {
 async function registerAccount() {
 
   const name =
-    registerName.value.trim();
+    registerName
+      .value
+      .trim();
 
   const email =
     registerEmail
@@ -441,7 +566,8 @@ async function registerAccount() {
   }
 
   if (
-    password !== password2
+    password !==
+    password2
   ) {
 
     setRegisterError(
@@ -451,7 +577,8 @@ async function registerAccount() {
     return;
   }
 
-  registerButton.disabled = true;
+  registerButton.disabled =
+    true;
 
   registerStatus.textContent =
     "Membuat akun...";
@@ -539,7 +666,8 @@ async function loginAccount() {
     return;
   }
 
-  loginButton.disabled = true;
+  loginButton.disabled =
+    true;
 
   loginStatus.className =
     "small-status";
@@ -556,7 +684,9 @@ async function loginAccount() {
       await supabaseClient
         .auth
         .signInWithPassword({
+
           email,
+
           password
         });
 
@@ -597,13 +727,17 @@ async function startApp() {
     return;
   }
 
-  loginScreen.classList.add(
-    "hidden"
-  );
+  loginScreen
+    .classList
+    .add(
+      "hidden"
+    );
 
-  appScreen.classList.remove(
-    "hidden"
-  );
+  appScreen
+    .classList
+    .remove(
+      "hidden"
+    );
 
   const ok =
     await loadMyProfile();
@@ -626,17 +760,23 @@ async function startApp() {
   currentPartner = null;
   currentRoomId = null;
 
-  appScreen.classList.remove(
-    "chat-open"
-  );
+  appScreen
+    .classList
+    .remove(
+      "chat-open"
+    );
 
-  conversation.classList.add(
-    "hidden"
-  );
+  conversation
+    .classList
+    .add(
+      "hidden"
+    );
 
-  emptyChat.classList.remove(
-    "hidden"
-  );
+  emptyChat
+    .classList
+    .remove(
+      "hidden"
+    );
 
   await updateLastSeen();
 
@@ -651,11 +791,8 @@ async function startApp() {
   );
 
   /*
-   * Presence menentukan ONLINE.
-   *
-   * Heartbeat ini menyimpan last_seen,
-   * sehingga saat Presence hilang,
-   * waktu terakhir aktif tetap akurat.
+   * Heartbeat last seen.
+   * Presence tetap menentukan Online.
    */
   lastSeenTimer =
     setInterval(
@@ -682,7 +819,9 @@ async function loadMyProfile() {
     error
   } =
     await supabaseClient
-      .from("profiles")
+      .from(
+        "profiles"
+      )
       .select("*")
       .eq(
         "id",
@@ -700,7 +839,8 @@ async function loadMyProfile() {
     return false;
   }
 
-  currentProfile = data;
+  currentProfile =
+    data;
 
   return true;
 }
@@ -721,7 +861,9 @@ async function loadUsers() {
     error
   } =
     await supabaseClient
-      .from("profiles")
+      .from(
+        "profiles"
+      )
       .select("*")
       .neq(
         "id",
@@ -755,44 +897,48 @@ async function loadUsers() {
     );
 
   profiles =
-    (data || []).map(
-      profile => {
+    (data || [])
+      .map(
+        profile => {
 
-        const old =
-          oldProfiles.get(
-            profile.id
-          );
+          const old =
+            oldProfiles.get(
+              profile.id
+            );
 
-        return {
+          return {
 
-          ...profile,
+            ...profile,
 
-          unread_count:
-            old
-              ? Number(
-                  old.unread_count || 0
-                )
-              : 0,
+            unread_count:
+              old
+                ? Number(
+                    old.unread_count ||
+                    0
+                  )
+                : 0,
 
-          last_message:
-            old
-              ? old.last_message || ""
-              : "",
+            last_message:
+              old
+                ? old.last_message ||
+                  ""
+                : "",
 
-          last_message_at:
-            old
-              ? old.last_message_at || ""
-              : ""
-        };
-      }
-    );
+            last_message_at:
+              old
+                ? old.last_message_at ||
+                  ""
+                : ""
+          };
+        }
+      );
 
   await loadUserPreviews();
 }
 
 
 /* =========================================================
-   USER PREVIEW + UNREAD
+   PREVIEWS + UNREAD
 ========================================================= */
 
 async function loadUserPreviews() {
@@ -813,7 +959,9 @@ async function loadUserPreviews() {
       error: lastError
     } =
       await supabaseClient
-        .from("messages")
+        .from(
+          "messages"
+        )
         .select("*")
         .or(
           `and(sender_id.eq.${currentUser.id},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${currentUser.id})`
@@ -839,7 +987,9 @@ async function loadUserPreviews() {
       error: countError
     } =
       await supabaseClient
-        .from("messages")
+        .from(
+          "messages"
+        )
         .select(
           "id",
           {
@@ -883,7 +1033,9 @@ async function loadUserPreviews() {
 
       last_message:
         last
-          ? getPreviewText(last)
+          ? getPreviewText(
+              last
+            )
           : "",
 
       last_message_at:
@@ -893,7 +1045,8 @@ async function loadUserPreviews() {
     });
   }
 
-  profiles = rendered;
+  profiles =
+    rendered;
 
   sortProfiles();
 
@@ -910,7 +1063,10 @@ async function loadUserPreviews() {
 function sortProfiles() {
 
   profiles.sort(
-    (a, b) => {
+    (
+      a,
+      b
+    ) => {
 
       const aTime =
         a.last_message_at
@@ -927,10 +1083,14 @@ function sortProfiles() {
           : 0;
 
       if (
-        bTime !== aTime
+        bTime !==
+        aTime
       ) {
 
-        return bTime - aTime;
+        return (
+          bTime -
+          aTime
+        );
       }
 
       return (
@@ -945,12 +1105,14 @@ function sortProfiles() {
 
 
 /* =========================================================
-   PRESENCE + TYPING BROADCAST
+   PRESENCE
 ========================================================= */
 
 function subscribePresence() {
 
-  if (presenceChannel) {
+  if (
+    presenceChannel
+  ) {
 
     supabaseClient
       .removeChannel(
@@ -970,7 +1132,9 @@ function subscribePresence() {
         config: {
 
           presence: {
-            key: currentUser.id
+
+            key:
+              currentUser.id
           }
         }
       }
@@ -1001,8 +1165,7 @@ function subscribePresence() {
   );
 
   /*
-   * Typing memakai Broadcast.
-   * Tidak masuk database.
+   * Typing realtime
    */
   presenceChannel.on(
     "broadcast",
@@ -1026,23 +1189,25 @@ function subscribePresence() {
       );
 
       if (
-        status === "SUBSCRIBED"
+        status ===
+        "SUBSCRIBED"
       ) {
 
-        await presenceChannel.track({
+        await presenceChannel
+          .track({
 
-          user_id:
-            currentUser.id,
+            user_id:
+              currentUser.id,
 
-          name:
-            currentProfile
-              ? currentProfile.name
-              : "User",
+            name:
+              currentProfile
+                ? currentProfile.name
+                : "User",
 
-          online_at:
-            new Date()
-              .toISOString()
-        });
+            online_at:
+              new Date()
+                .toISOString()
+          });
       }
     }
   );
@@ -1051,7 +1216,9 @@ function subscribePresence() {
 
 function syncOnlineUsers() {
 
-  if (!presenceChannel) {
+  if (
+    !presenceChannel
+  ) {
     return;
   }
 
@@ -1059,7 +1226,7 @@ function syncOnlineUsers() {
     presenceChannel
       .presenceState();
 
-  const newOnlineUsers =
+  const users =
     new Set();
 
   Object.keys(
@@ -1067,14 +1234,14 @@ function syncOnlineUsers() {
   ).forEach(
     userId => {
 
-      newOnlineUsers.add(
+      users.add(
         userId
       );
     }
   );
 
   onlineUsers =
-    newOnlineUsers;
+    users;
 
   refreshStatusDisplay();
 }
@@ -1107,32 +1274,37 @@ async function sendTypingState(
   }
 
   if (
-    isTyping === typing
+    isTyping ===
+    typing
   ) {
     return;
   }
 
-  isTyping = typing;
+  isTyping =
+    typing;
 
   try {
 
-    await presenceChannel.send({
+    await presenceChannel
+      .send({
 
-      type: "broadcast",
+        type:
+          "broadcast",
 
-      event: "typing",
+        event:
+          "typing",
 
-      payload: {
+        payload: {
 
-        sender_id:
-          currentUser.id,
+          sender_id:
+            currentUser.id,
 
-        receiver_id:
-          currentPartner.id,
+          receiver_id:
+            currentPartner.id,
 
-        typing
-      }
-    });
+          typing
+        }
+      });
 
   } catch (error) {
 
@@ -1203,14 +1375,14 @@ function handleRemoteTyping(
 
   if (
     payload.receiver_id !==
-      currentUser.id
+    currentUser.id
   ) {
     return;
   }
 
   if (
     payload.sender_id !==
-      currentPartner.id
+    currentPartner.id
   ) {
     return;
   }
@@ -1231,15 +1403,12 @@ function handleRemoteTyping(
     partnerStatus.textContent =
       "mengetik...";
 
-    /*
-     * Safety timeout jika event false
-     * gagal diterima.
-     */
     remoteTypingTimer =
       setTimeout(
         () => {
 
-          remoteUserTyping = false;
+          remoteUserTyping =
+            false;
 
           refreshPartnerStatus();
 
@@ -1255,7 +1424,7 @@ function handleRemoteTyping(
 
 
 /* =========================================================
-   STATUS
+   USER STATUS
 ========================================================= */
 
 function refreshStatusDisplay() {
@@ -1268,7 +1437,9 @@ function refreshStatusDisplay() {
 
 function refreshPartnerStatus() {
 
-  if (!currentPartner) {
+  if (
+    !currentPartner
+  ) {
     return;
   }
 
@@ -1318,9 +1489,12 @@ function getUserStatus(
 
 function renderUsers() {
 
-  userList.innerHTML = "";
+  userList.innerHTML =
+    "";
 
-  if (!profiles.length) {
+  if (
+    !profiles.length
+  ) {
 
     userList.innerHTML =
       `
@@ -1344,7 +1518,8 @@ function renderUsers() {
           "button"
         );
 
-      button.type = "button";
+      button.type =
+        "button";
 
       button.className =
         "user-item";
@@ -1352,7 +1527,7 @@ function renderUsers() {
       if (
         currentPartner &&
         currentPartner.id ===
-          user.id
+        user.id
       ) {
 
         button.classList.add(
@@ -1406,10 +1581,13 @@ function renderUsers() {
 
       const unread =
         Number(
-          user.unread_count || 0
+          user.unread_count ||
+          0
         );
 
-      if (unread > 0) {
+      if (
+        unread > 0
+      ) {
 
         const badge =
           document.createElement(
@@ -1422,7 +1600,9 @@ function renderUsers() {
         badge.textContent =
           unread > 99
             ? "99+"
-            : String(unread);
+            : String(
+                unread
+              );
 
         top.appendChild(
           badge
@@ -1485,7 +1665,10 @@ function renderUsers() {
 
       button.addEventListener(
         "click",
-        () => openChat(user)
+        () =>
+          openChat(
+            user
+          )
       );
 
       userList.appendChild(
@@ -1506,10 +1689,9 @@ async function openChat(
   user
 ) {
 
-  /*
-   * Matikan typing room lama.
-   */
-  if (currentPartner) {
+  if (
+    currentPartner
+  ) {
 
     await sendTypingState(
       false
@@ -1519,7 +1701,8 @@ async function openChat(
   const freshUser =
     profiles.find(
       item =>
-        item.id === user.id
+        item.id ===
+        user.id
     ) || user;
 
   currentPartner = {
@@ -1541,7 +1724,8 @@ async function openChat(
   closeEmojiPanel();
   closeMessageMenu();
 
-  remoteUserTyping = false;
+  remoteUserTyping =
+    false;
 
   partnerName.textContent =
     currentPartner.name;
@@ -1553,17 +1737,23 @@ async function openChat(
 
   refreshPartnerStatus();
 
-  emptyChat.classList.add(
-    "hidden"
-  );
+  emptyChat
+    .classList
+    .add(
+      "hidden"
+    );
 
-  conversation.classList.remove(
-    "hidden"
-  );
+  conversation
+    .classList
+    .remove(
+      "hidden"
+    );
 
-  appScreen.classList.add(
-    "chat-open"
-  );
+  appScreen
+    .classList
+    .add(
+      "chat-open"
+    );
 
   messagesElement.innerHTML =
     `
@@ -1584,6 +1774,8 @@ async function openChat(
   await loadMessages();
 
   await markAsRead();
+
+  updateNotificationIndicator();
 
   messageInput.focus();
 }
@@ -1606,7 +1798,8 @@ async function closeMobileChat() {
   serverMessages = [];
   pendingMessages = [];
 
-  remoteUserTyping = false;
+  remoteUserTyping =
+    false;
 
   cancelReply();
   cancelEdit();
@@ -1616,23 +1809,30 @@ async function closeMobileChat() {
 
   resetWallpaper();
 
-  appScreen.classList.remove(
-    "chat-open"
-  );
+  appScreen
+    .classList
+    .remove(
+      "chat-open"
+    );
 
-  conversation.classList.add(
-    "hidden"
-  );
+  conversation
+    .classList
+    .add(
+      "hidden"
+    );
 
-  emptyChat.classList.remove(
-    "hidden"
-  );
+  emptyChat
+    .classList
+    .remove(
+      "hidden"
+    );
 
   partnerName.textContent = "";
   partnerInitial.textContent = "";
   partnerStatus.textContent = "";
 
-  messagesElement.innerHTML = "";
+  messagesElement.innerHTML =
+    "";
 
   renderUsers();
 }
@@ -1659,7 +1859,9 @@ async function loadMessages() {
     error
   } =
     await supabaseClient
-      .from("messages")
+      .from(
+        "messages"
+      )
       .select("*")
       .or(
         `and(sender_id.eq.${currentUser.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${currentUser.id})`
@@ -1684,9 +1886,8 @@ async function loadMessages() {
   if (
     !currentPartner ||
     currentPartner.id !==
-      partnerId
+    partnerId
   ) {
-
     return;
   }
 
@@ -1702,12 +1903,14 @@ async function loadMessages() {
 
 
 /* =========================================================
-   REALTIME
+   REALTIME SUBSCRIPTION
 ========================================================= */
 
 function subscribeRealtime() {
 
-  if (realtimeChannel) {
+  if (
+    realtimeChannel
+  ) {
 
     supabaseClient
       .removeChannel(
@@ -1819,7 +2022,9 @@ function handleRealtimeInsert(
   message
 ) {
 
-  if (!currentUser) {
+  if (
+    !currentUser
+  ) {
     return;
   }
 
@@ -1830,7 +2035,9 @@ function handleRealtimeInsert(
     message.receiver_id ===
       currentUser.id;
 
-  if (!involvesMe) {
+  if (
+    !involvesMe
+  ) {
     return;
   }
 
@@ -1848,11 +2055,18 @@ function handleRealtimeInsert(
     currentPartner &&
     currentPartner.id ===
       partnerId &&
-    appScreen.classList.contains(
-      "chat-open"
-    );
+    appScreen
+      .classList
+      .contains(
+        "chat-open"
+      );
 
-  if (roomIsOpen) {
+  /*
+   * Room sedang dibuka.
+   */
+  if (
+    roomIsOpen
+  ) {
 
     const exists =
       serverMessages.some(
@@ -1874,15 +2088,19 @@ function handleRealtimeInsert(
       true
     );
 
+    /*
+     * Jika chat terlihat,
+     * pesan langsung dianggap dibaca.
+     */
     if (
       message.sender_id ===
-        partnerId
+      partnerId
       &&
       message.receiver_id ===
-        currentUser.id
+      currentUser.id
       &&
       document.visibilityState ===
-        "visible"
+      "visible"
     ) {
 
       setProfileUnread(
@@ -1893,16 +2111,38 @@ function handleRealtimeInsert(
       renderUsers();
 
       markAsRead();
+
+    /*
+     * Room terbuka tetapi browser
+     * sedang di tab lain.
+     * Tetap beri unread notification.
+     */
+    } else if (
+      message.sender_id ===
+      partnerId
+      &&
+      message.receiver_id ===
+      currentUser.id
+    ) {
+
+      incrementProfileUnread(
+        partnerId
+      );
+
+      renderUsers();
     }
 
+  /*
+   * Room tidak sedang dibuka.
+   */
   } else {
 
     if (
       message.receiver_id ===
-        currentUser.id
+      currentUser.id
       &&
       message.sender_id ===
-        partnerId
+      partnerId
     ) {
 
       incrementProfileUnread(
@@ -1927,7 +2167,9 @@ function handleRealtimeUpdate(
   message
 ) {
 
-  if (!currentUser) {
+  if (
+    !currentUser
+  ) {
     return;
   }
 
@@ -1938,7 +2180,9 @@ function handleRealtimeUpdate(
     message.receiver_id ===
       currentUser.id;
 
-  if (!involvesMe) {
+  if (
+    !involvesMe
+  ) {
     return;
   }
 
@@ -1949,7 +2193,9 @@ function handleRealtimeUpdate(
         message.id
     );
 
-  if (index !== -1) {
+  if (
+    index !== -1
+  ) {
 
     serverMessages[index] =
       message;
@@ -1966,9 +2212,9 @@ function handleRealtimeUpdate(
   if (
     currentPartner &&
     currentPartner.id ===
-      message.sender_id &&
+    message.sender_id &&
     message.receiver_id ===
-      currentUser.id &&
+    currentUser.id &&
     message.read_at
   ) {
 
@@ -2012,11 +2258,6 @@ async function handleRealtimeDelete(
     false
   );
 
-  /*
-   * DELETE realtime bisa hanya membawa
-   * primary key tergantung replica identity.
-   * Refresh preview agar sidebar tetap benar.
-   */
   await loadUsers();
 }
 
@@ -2029,7 +2270,9 @@ function updateSidebarFromMessage(
   message
 ) {
 
-  if (!currentUser) {
+  if (
+    !currentUser
+  ) {
     return;
   }
 
@@ -2043,10 +2286,12 @@ function updateSidebarFromMessage(
     profiles.findIndex(
       item =>
         item.id ===
-          partnerId
+        partnerId
     );
 
-  if (index === -1) {
+  if (
+    index === -1
+  ) {
 
     loadUsers();
 
@@ -2084,18 +2329,22 @@ function incrementProfileUnread(
     profiles.findIndex(
       item =>
         item.id ===
-          profileId
+        profileId
     );
 
-  if (index === -1) {
+  if (
+    index === -1
+  ) {
     return;
   }
 
-  profiles[index].unread_count =
-    Number(
-      profiles[index]
-        .unread_count || 0
-    ) + 1;
+  profiles[index]
+    .unread_count =
+      Number(
+        profiles[index]
+          .unread_count ||
+        0
+      ) + 1;
 
   updateNotificationIndicator();
 }
@@ -2110,40 +2359,82 @@ function setProfileUnread(
     profiles.findIndex(
       item =>
         item.id ===
-          profileId
+        profileId
     );
 
-  if (index === -1) {
+  if (
+    index === -1
+  ) {
     return;
   }
 
-  profiles[index].unread_count =
-    Number(value) || 0;
+  profiles[index]
+    .unread_count =
+      Number(
+        value
+      ) || 0;
 
   updateNotificationIndicator();
 }
 
 
 /* =========================================================
-   TAB NOTIFICATION
+   BROWSER TAB NOTIFICATION
+
+   Ada unread:
+   ● Private Chat
+
+   Tidak ada unread:
+   Private Chat
 ========================================================= */
+
+function getTotalUnread() {
+
+  return profiles.reduce(
+    (
+      total,
+      profile
+    ) => {
+
+      return (
+        total +
+        Number(
+          profile.unread_count ||
+          0
+        )
+      );
+
+    },
+    0
+  );
+}
+
 
 function updateNotificationIndicator() {
 
-  const hasUnread =
-    profiles.some(
-      profile =>
-        Number(
-          profile.unread_count || 0
-        ) > 0
-    );
+  const totalUnread =
+    getTotalUnread();
 
-  if (hasUnread) {
+  if (
+    totalUnread > 0
+  ) {
 
+    /*
+     * Judul tab.
+     *
+     * Contoh:
+     * ● Private Chat
+     */
     document.title =
-      "● " + APP_TITLE;
+      "● " +
+      APP_TITLE;
 
-    if (appFavicon) {
+    /*
+     * Titik merah pada favicon.
+     */
+    if (
+      appFavicon
+    ) {
 
       appFavicon.href =
         UNREAD_FAVICON;
@@ -2161,7 +2452,9 @@ function resetNotificationIndicator() {
   document.title =
     APP_TITLE;
 
-  if (appFavicon) {
+  if (
+    appFavicon
+  ) {
 
     appFavicon.href =
       DEFAULT_FAVICON;
@@ -2170,24 +2463,29 @@ function resetNotificationIndicator() {
 
 
 /* =========================================================
-   PROFILE REALTIME
+   PROFILE UPDATE
 ========================================================= */
 
 function handleProfileUpdate(
   profile
 ) {
 
-  if (!profile) {
+  if (
+    !profile
+  ) {
     return;
   }
 
   const index =
     profiles.findIndex(
       item =>
-        item.id === profile.id
+        item.id ===
+        profile.id
     );
 
-  if (index !== -1) {
+  if (
+    index !== -1
+  ) {
 
     profiles[index] = {
 
@@ -2196,22 +2494,25 @@ function handleProfileUpdate(
 
       unread_count:
         profiles[index]
-          .unread_count || 0,
+          .unread_count ||
+        0,
 
       last_message:
         profiles[index]
-          .last_message || "",
+          .last_message ||
+        "",
 
       last_message_at:
         profiles[index]
-          .last_message_at || ""
+          .last_message_at ||
+        ""
     };
   }
 
   if (
     currentPartner &&
     currentPartner.id ===
-      profile.id
+    profile.id
   ) {
 
     currentPartner = {
@@ -2228,12 +2529,14 @@ function handleProfileUpdate(
 
 
 /* =========================================================
-   CLEANUP
+   CLEANUP REALTIME
 ========================================================= */
 
 function cleanupRealtime() {
 
-  if (realtimeChannel) {
+  if (
+    realtimeChannel
+  ) {
 
     supabaseClient
       .removeChannel(
@@ -2243,7 +2546,9 @@ function cleanupRealtime() {
     realtimeChannel = null;
   }
 
-  if (presenceChannel) {
+  if (
+    presenceChannel
+  ) {
 
     presenceChannel
       .untrack()
@@ -2288,7 +2593,7 @@ function reconcilePending() {
 
 
 /* =========================================================
-   SEND / SAVE EDIT
+   SEND MESSAGE
 ========================================================= */
 
 async function sendMessage() {
@@ -2305,15 +2610,20 @@ async function sendMessage() {
       .value
       .trim();
 
-  if (!content) {
+  if (
+    !content
+  ) {
     return;
   }
 
   /*
-   * Jika sedang edit,
-   * tombol kirim menjadi SAVE.
+   * Jika mode edit,
+   * Enter / tombol Send
+   * menyimpan edit.
    */
-  if (editingMessage) {
+  if (
+    editingMessage
+  ) {
 
     await saveEditedMessage(
       content
@@ -2340,7 +2650,8 @@ async function sendMessage() {
 
   const optimistic = {
 
-    id: null,
+    id:
+      null,
 
     client_id:
       clientId,
@@ -2387,7 +2698,8 @@ async function sendMessage() {
     optimistic
   );
 
-  messageInput.value = "";
+  messageInput.value =
+    "";
 
   autoResizeMessageInput();
 
@@ -2404,7 +2716,9 @@ async function sendMessage() {
     error
   } =
     await supabaseClient
-      .from("messages")
+      .from(
+        "messages"
+      )
       .insert({
 
         client_id:
@@ -2427,7 +2741,9 @@ async function sendMessage() {
       .select()
       .single();
 
-  if (error) {
+  if (
+    error
+  ) {
 
     console.error(
       "Send:",
@@ -2438,13 +2754,18 @@ async function sendMessage() {
       pendingMessages.find(
         item =>
           item.client_id ===
-            clientId
+          clientId
       );
 
-    if (failed) {
+    if (
+      failed
+    ) {
 
-      failed.pending = false;
-      failed.failed = true;
+      failed.pending =
+        false;
+
+      failed.failed =
+        true;
     }
 
     renderMessages(
@@ -2454,21 +2775,26 @@ async function sendMessage() {
     return;
   }
 
-  if (data) {
+  if (
+    data
+  ) {
 
     if (
       currentPartner &&
       currentPartner.id ===
-        partnerSnapshot.id
+      partnerSnapshot.id
     ) {
 
       const exists =
         serverMessages.some(
           item =>
-            item.id === data.id
+            item.id ===
+            data.id
         );
 
-      if (!exists) {
+      if (
+        !exists
+      ) {
 
         serverMessages.push(
           data
@@ -2490,308 +2816,7 @@ async function sendMessage() {
 
 
 /* =========================================================
-   EDIT MESSAGE
-========================================================= */
-
-function startEdit(
-  message
-) {
-
-  if (
-    !message ||
-    !message.id ||
-    message.sender_id !==
-      currentUser.id
-  ) {
-    return;
-  }
-
-  cancelReply();
-
-  editingMessage = {
-    ...message
-  };
-
-  activeEditText.textContent =
-    message.content;
-
-  activeEdit.classList.remove(
-    "hidden"
-  );
-
-  messageInput.value =
-    message.content;
-
-  autoResizeMessageInput();
-
-  messageInput.focus();
-
-  const length =
-    messageInput.value.length;
-
-  messageInput.setSelectionRange(
-    length,
-    length
-  );
-}
-
-
-function cancelEdit() {
-
-  editingMessage = null;
-
-  activeEdit.classList.add(
-    "hidden"
-  );
-
-  activeEditText.textContent = "";
-
-  if (
-    messageInput
-  ) {
-
-    messageInput.value = "";
-
-    autoResizeMessageInput();
-  }
-}
-
-
-async function saveEditedMessage(
-  content
-) {
-
-  if (
-    !editingMessage ||
-    !currentUser
-  ) {
-    return;
-  }
-
-  const messageId =
-    editingMessage.id;
-
-  const {
-    data,
-    error
-  } =
-    await supabaseClient
-      .from("messages")
-      .update({
-
-        content,
-
-        edited_at:
-          new Date()
-            .toISOString()
-      })
-      .eq(
-        "id",
-        messageId
-      )
-      .eq(
-        "sender_id",
-        currentUser.id
-      )
-      .select()
-      .single();
-
-  if (error) {
-
-    console.error(
-      "Edit:",
-      error
-    );
-
-    alert(
-      "Pesan gagal diedit."
-    );
-
-    return;
-  }
-
-  const index =
-    serverMessages.findIndex(
-      item =>
-        item.id ===
-          messageId
-    );
-
-  if (
-    index !== -1 &&
-    data
-  ) {
-
-    serverMessages[index] =
-      data;
-  }
-
-  editingMessage = null;
-
-  activeEdit.classList.add(
-    "hidden"
-  );
-
-  activeEditText.textContent = "";
-
-  messageInput.value = "";
-
-  autoResizeMessageInput();
-
-  renderMessages(
-    false
-  );
-
-  if (data) {
-
-    updateSidebarFromMessage(
-      data
-    );
-  }
-
-  messageInput.focus();
-}
-
-
-/* =========================================================
-   DELETE
-========================================================= */
-
-async function deleteMessage(
-  message
-) {
-
-  if (
-    !message ||
-    !message.id ||
-    message.sender_id !==
-      currentUser.id
-  ) {
-    return;
-  }
-
-  const ok =
-    confirm(
-      "Hapus pesan ini?"
-    );
-
-  if (!ok) {
-    return;
-  }
-
-  const {
-    error
-  } =
-    await supabaseClient
-      .from("messages")
-      .delete()
-      .eq(
-        "id",
-        message.id
-      )
-      .eq(
-        "sender_id",
-        currentUser.id
-      );
-
-  if (error) {
-
-    console.error(
-      "Delete:",
-      error
-    );
-
-    alert(
-      "Pesan gagal dihapus."
-    );
-
-    return;
-  }
-
-  serverMessages =
-    serverMessages.filter(
-      item =>
-        item.id !==
-          message.id
-    );
-
-  if (
-    replyingTo &&
-    replyingTo.id ===
-      message.id
-  ) {
-
-    cancelReply();
-  }
-
-  if (
-    editingMessage &&
-    editingMessage.id ===
-      message.id
-  ) {
-
-    cancelEdit();
-  }
-
-  renderMessages(
-    false
-  );
-
-  await loadUsers();
-}
-
-
-/* =========================================================
-   COPY
-========================================================= */
-
-async function copyMessage(
-  message
-) {
-
-  if (!message) {
-    return;
-  }
-
-  const content =
-    String(
-      message.content || ""
-    );
-
-  try {
-
-    await navigator.clipboard
-      .writeText(
-        content
-      );
-
-  } catch (error) {
-
-    const textarea =
-      document.createElement(
-        "textarea"
-      );
-
-    textarea.value =
-      content;
-
-    document.body.appendChild(
-      textarea
-    );
-
-    textarea.select();
-
-    document.execCommand(
-      "copy"
-    );
-
-    textarea.remove();
-  }
-}
-
-
-/* =========================================================
-   MARK AS READ
+   MARK READ
 ========================================================= */
 
 async function markAsRead() {
@@ -2805,15 +2830,17 @@ async function markAsRead() {
 
   if (
     document.visibilityState !==
-      "visible"
+    "visible"
   ) {
     return;
   }
 
   if (
-    !appScreen.classList.contains(
-      "chat-open"
-    )
+    !appScreen
+      .classList
+      .contains(
+        "chat-open"
+      )
   ) {
     return;
   }
@@ -2828,11 +2855,15 @@ async function markAsRead() {
 
   renderUsers();
 
+  updateNotificationIndicator();
+
   const {
     error
   } =
     await supabaseClient
-      .from("messages")
+      .from(
+        "messages"
+      )
       .update({
 
         read_at:
@@ -2852,7 +2883,9 @@ async function markAsRead() {
         null
       );
 
-  if (error) {
+  if (
+    error
+  ) {
 
     console.error(
       "Read:",
@@ -2870,7 +2903,9 @@ function renderMessages(
   forceScroll = false
 ) {
 
-  if (!currentPartner) {
+  if (
+    !currentPartner
+  ) {
     return;
   }
 
@@ -2887,7 +2922,10 @@ function renderMessages(
   ];
 
   allMessages.sort(
-    (a, b) =>
+    (
+      a,
+      b
+    ) =>
 
       new Date(
         a.created_at
@@ -2900,9 +2938,12 @@ function renderMessages(
       ).getTime()
   );
 
-  messagesElement.innerHTML = "";
+  messagesElement.innerHTML =
+    "";
 
-  if (!allMessages.length) {
+  if (
+    !allMessages.length
+  ) {
 
     messagesElement.innerHTML =
       `
@@ -2919,9 +2960,16 @@ function renderMessages(
   allMessages.forEach(
     message => {
 
+      /*
+       * mine = pesan yang saya kirim.
+       *
+       * CSS:
+       * mine = biru
+       * other = putih
+       */
       const mine =
         message.sender_id ===
-          currentUser.id;
+        currentUser.id;
 
       const row =
         document.createElement(
@@ -2944,9 +2992,11 @@ function renderMessages(
       bubble.className =
         "message-bubble";
 
-      /*
-       * REPLY PREVIEW
-       */
+
+      /* =========================
+         REPLY PREVIEW
+      ========================== */
+
       if (
         message.reply_to
       ) {
@@ -2955,7 +3005,7 @@ function renderMessages(
           allMessages.find(
             item =>
               item.id ===
-                message.reply_to
+              message.reply_to
           );
 
         const replyBox =
@@ -2982,11 +3032,13 @@ function renderMessages(
         replyText.className =
           "reply-text";
 
-        if (original) {
+        if (
+          original
+        ) {
 
           replyName.textContent =
             original.sender_id ===
-              currentUser.id
+            currentUser.id
               ? "Kamu"
               : currentPartner
                 ? currentPartner.name
@@ -3017,6 +3069,11 @@ function renderMessages(
         );
       }
 
+
+      /* =========================
+         MESSAGE TEXT
+      ========================== */
+
       const text =
         document.createElement(
           "div"
@@ -3031,6 +3088,11 @@ function renderMessages(
       bubble.appendChild(
         text
       );
+
+
+      /* =========================
+         META
+      ========================== */
 
       const meta =
         document.createElement(
@@ -3074,7 +3136,9 @@ function renderMessages(
         time
       );
 
-      if (mine) {
+      if (
+        mine
+      ) {
 
         const status =
           document.createElement(
@@ -3101,6 +3165,11 @@ function renderMessages(
       bubble.appendChild(
         meta
       );
+
+
+      /* =========================
+         MESSAGE MENU
+      ========================== */
 
       if (
         message.id &&
@@ -3142,7 +3211,7 @@ function renderMessages(
 
 
 /* =========================================================
-   MESSAGE STATE
+   MESSAGE STATUS
 ========================================================= */
 
 function getMessageState(
@@ -3215,17 +3284,21 @@ function openMessageMenu(
     ...message
   };
 
-  menuEdit.classList.toggle(
-    "hidden",
-    message.sender_id !==
+  menuEdit
+    .classList
+    .toggle(
+      "hidden",
+      message.sender_id !==
       currentUser.id
-  );
+    );
 
-  menuDelete.classList.toggle(
-    "hidden",
-    message.sender_id !==
+  menuDelete
+    .classList
+    .toggle(
+      "hidden",
+      message.sender_id !==
       currentUser.id
-  );
+    );
 
   messageMenuBackdrop
     .classList
@@ -3239,10 +3312,6 @@ function openMessageMenu(
       "hidden"
     );
 
-  /*
-   * Desktop: dekat bubble.
-   * Mobile diatur CSS menjadi bottom sheet.
-   */
   if (
     window.innerWidth > 700
   ) {
@@ -3251,8 +3320,11 @@ function openMessageMenu(
       event.currentTarget
         .getBoundingClientRect();
 
-    const menuWidth = 190;
-    const estimatedHeight = 210;
+    const menuWidth =
+      190;
+
+    const estimatedHeight =
+      210;
 
     let left =
       rect.left;
@@ -3278,7 +3350,8 @@ function openMessageMenu(
       rect.bottom + 5;
 
     if (
-      top + estimatedHeight >
+      top +
+      estimatedHeight >
       window.innerHeight
     ) {
 
@@ -3301,11 +3374,14 @@ function openMessageMenu(
 
 function closeMessageMenu() {
 
-  selectedMessage = null;
+  selectedMessage =
+    null;
 
-  messageMenu.classList.add(
-    "hidden"
-  );
+  messageMenu
+    .classList
+    .add(
+      "hidden"
+    );
 
   messageMenuBackdrop
     .classList
@@ -3313,8 +3389,11 @@ function closeMessageMenu() {
       "hidden"
     );
 
-  messageMenu.style.left = "";
-  messageMenu.style.top = "";
+  messageMenu.style.left =
+    "";
+
+  messageMenu.style.top =
+    "";
 }
 
 
@@ -3326,7 +3405,9 @@ function startReply(
   message
 ) {
 
-  if (!currentPartner) {
+  if (
+    !currentPartner
+  ) {
     return;
   }
 
@@ -3338,7 +3419,7 @@ function startReply(
 
   activeReplyTitle.textContent =
     message.sender_id ===
-      currentUser.id
+    currentUser.id
       ? "Reply ke pesan kamu"
       : "Reply ke " +
         currentPartner.name;
@@ -3346,9 +3427,11 @@ function startReply(
   activeReplyText.textContent =
     message.content;
 
-  activeReply.classList.remove(
-    "hidden"
-  );
+  activeReply
+    .classList
+    .remove(
+      "hidden"
+    );
 
   messageInput.focus();
 }
@@ -3356,13 +3439,350 @@ function startReply(
 
 function cancelReply() {
 
-  replyingTo = null;
+  replyingTo =
+    null;
 
-  activeReply.classList.add(
-    "hidden"
+  activeReply
+    .classList
+    .add(
+      "hidden"
+    );
+
+  activeReplyText.textContent =
+    "";
+}
+
+
+/* =========================================================
+   EDIT
+========================================================= */
+
+function startEdit(
+  message
+) {
+
+  if (
+    !message ||
+    !message.id ||
+    message.sender_id !==
+    currentUser.id
+  ) {
+    return;
+  }
+
+  cancelReply();
+
+  editingMessage = {
+    ...message
+  };
+
+  activeEditText.textContent =
+    message.content;
+
+  activeEdit
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  messageInput.value =
+    message.content;
+
+  autoResizeMessageInput();
+
+  messageInput.focus();
+
+  const length =
+    messageInput
+      .value
+      .length;
+
+  messageInput
+    .setSelectionRange(
+      length,
+      length
+    );
+}
+
+
+function cancelEdit() {
+
+  editingMessage =
+    null;
+
+  activeEdit
+    .classList
+    .add(
+      "hidden"
+    );
+
+  activeEditText.textContent =
+    "";
+
+  if (
+    messageInput
+  ) {
+
+    messageInput.value =
+      "";
+
+    autoResizeMessageInput();
+  }
+}
+
+
+async function saveEditedMessage(
+  content
+) {
+
+  if (
+    !editingMessage ||
+    !currentUser
+  ) {
+    return;
+  }
+
+  const messageId =
+    editingMessage.id;
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .update({
+
+        content,
+
+        edited_at:
+          new Date()
+            .toISOString()
+      })
+      .eq(
+        "id",
+        messageId
+      )
+      .eq(
+        "sender_id",
+        currentUser.id
+      )
+      .select()
+      .single();
+
+  if (
+    error
+  ) {
+
+    console.error(
+      "Edit:",
+      error
+    );
+
+    alert(
+      "Pesan gagal diedit."
+    );
+
+    return;
+  }
+
+  const index =
+    serverMessages.findIndex(
+      item =>
+        item.id ===
+        messageId
+    );
+
+  if (
+    index !== -1 &&
+    data
+  ) {
+
+    serverMessages[index] =
+      data;
+  }
+
+  editingMessage =
+    null;
+
+  activeEdit
+    .classList
+    .add(
+      "hidden"
+    );
+
+  activeEditText.textContent =
+    "";
+
+  messageInput.value =
+    "";
+
+  autoResizeMessageInput();
+
+  renderMessages(
+    false
   );
 
-  activeReplyText.textContent = "";
+  if (
+    data
+  ) {
+
+    updateSidebarFromMessage(
+      data
+    );
+  }
+
+  messageInput.focus();
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+async function deleteMessage(
+  message
+) {
+
+  if (
+    !message ||
+    !message.id ||
+    message.sender_id !==
+    currentUser.id
+  ) {
+    return;
+  }
+
+  const ok =
+    confirm(
+      "Hapus pesan ini?"
+    );
+
+  if (
+    !ok
+  ) {
+    return;
+  }
+
+  const {
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .delete()
+      .eq(
+        "id",
+        message.id
+      )
+      .eq(
+        "sender_id",
+        currentUser.id
+      );
+
+  if (
+    error
+  ) {
+
+    console.error(
+      "Delete:",
+      error
+    );
+
+    alert(
+      "Pesan gagal dihapus."
+    );
+
+    return;
+  }
+
+  serverMessages =
+    serverMessages.filter(
+      item =>
+        item.id !==
+        message.id
+    );
+
+  if (
+    replyingTo &&
+    replyingTo.id ===
+    message.id
+  ) {
+
+    cancelReply();
+  }
+
+  if (
+    editingMessage &&
+    editingMessage.id ===
+    message.id
+  ) {
+
+    cancelEdit();
+  }
+
+  renderMessages(
+    false
+  );
+
+  await loadUsers();
+}
+
+
+/* =========================================================
+   COPY
+========================================================= */
+
+async function copyMessage(
+  message
+) {
+
+  if (
+    !message
+  ) {
+    return;
+  }
+
+  const content =
+    String(
+      message.content ||
+      ""
+    );
+
+  try {
+
+    await navigator
+      .clipboard
+      .writeText(
+        content
+      );
+
+  } catch (error) {
+
+    const textarea =
+      document.createElement(
+        "textarea"
+      );
+
+    textarea.value =
+      content;
+
+    document.body
+      .appendChild(
+        textarea
+      );
+
+    textarea.select();
+
+    document.execCommand(
+      "copy"
+    );
+
+    textarea.remove();
+  }
 }
 
 
@@ -3372,17 +3792,21 @@ function cancelReply() {
 
 function toggleEmojiPanel() {
 
-  emojiPanel.classList.toggle(
-    "hidden"
-  );
+  emojiPanel
+    .classList
+    .toggle(
+      "hidden"
+    );
 }
 
 
 function closeEmojiPanel() {
 
-  emojiPanel.classList.add(
-    "hidden"
-  );
+  emojiPanel
+    .classList
+    .add(
+      "hidden"
+    );
 }
 
 
@@ -3391,17 +3815,20 @@ function insertEmoji(
 ) {
 
   const start =
-    messageInput.selectionStart;
+    messageInput
+      .selectionStart;
 
   const end =
-    messageInput.selectionEnd;
+    messageInput
+      .selectionEnd;
 
-  messageInput.setRangeText(
-    emoji,
-    start,
-    end,
-    "end"
-  );
+  messageInput
+    .setRangeText(
+      emoji,
+      start,
+      end,
+      "end"
+    );
 
   messageInput.focus();
 
@@ -3412,7 +3839,7 @@ function insertEmoji(
 
 
 /* =========================================================
-   TEXTAREA AUTO RESIZE
+   TEXTAREA
 ========================================================= */
 
 function autoResizeMessageInput() {
@@ -3454,8 +3881,12 @@ function getRoomUsers() {
   ].sort();
 
   return {
-    user1: ids[0],
-    user2: ids[1]
+
+    user1:
+      ids[0],
+
+    user2:
+      ids[1]
   };
 }
 
@@ -3479,14 +3910,13 @@ async function ensureRoomSettings() {
   } =
     getRoomUsers();
 
-  /*
-   * Buat room bila belum ada.
-   */
   const {
     error: insertError
   } =
     await supabaseClient
-      .from("room_settings")
+      .from(
+        "room_settings"
+      )
       .upsert(
         {
 
@@ -3509,7 +3939,9 @@ async function ensureRoomSettings() {
         }
       );
 
-  if (insertError) {
+  if (
+    insertError
+  ) {
 
     console.error(
       "Room settings create:",
@@ -3522,7 +3954,9 @@ async function ensureRoomSettings() {
     error
   } =
     await supabaseClient
-      .from("room_settings")
+      .from(
+        "room_settings"
+      )
       .select("*")
       .eq(
         "room_id",
@@ -3530,7 +3964,9 @@ async function ensureRoomSettings() {
       )
       .maybeSingle();
 
-  if (error) {
+  if (
+    error
+  ) {
 
     console.error(
       "Room settings:",
@@ -3542,7 +3978,7 @@ async function ensureRoomSettings() {
 
   if (
     currentRoomId !==
-      roomIdSnapshot
+    roomIdSnapshot
   ) {
     return;
   }
@@ -3571,17 +4007,18 @@ function handleRoomSettingsRealtime(
     !row ||
     !currentRoomId ||
     row.room_id !==
-      currentRoomId
+    currentRoomId
   ) {
     return;
   }
 
   if (
     payload.eventType ===
-      "DELETE"
+    "DELETE"
   ) {
 
-    currentRoomSettings = null;
+    currentRoomSettings =
+      null;
 
     applyRoomWallpaper(
       null
@@ -3604,7 +4041,9 @@ function getWallpaperPublicUrl(
   path
 ) {
 
-  if (!path) {
+  if (
+    !path
+  ) {
     return "";
   }
 
@@ -3630,7 +4069,9 @@ function applyRoomWallpaper(
   path
 ) {
 
-  if (!path) {
+  if (
+    !path
+  ) {
 
     resetWallpaper();
 
@@ -3642,36 +4083,46 @@ function applyRoomWallpaper(
       path
     );
 
-  if (!url) {
+  if (
+    !url
+  ) {
 
     resetWallpaper();
 
     return;
   }
 
-  messagesElement.style.backgroundImage =
-    `url("${url}")`;
+  messagesElement
+    .style
+    .backgroundImage =
+      `url("${url}")`;
 }
 
 
 function resetWallpaper() {
 
-  messagesElement.style.backgroundImage =
-    "none";
+  messagesElement
+    .style
+    .backgroundImage =
+      "none";
 }
 
 
 function openWallpaperModal() {
 
-  if (!currentPartner) {
+  if (
+    !currentPartner
+  ) {
     return;
   }
 
-  selectedWallpaperFile = null;
+  selectedWallpaperFile =
+    null;
 
   clearWallpaperPreviewUrl();
 
-  wallpaperStatus.textContent = "";
+  wallpaperStatus.textContent =
+    "";
 
   saveWallpaperButton
     .classList
@@ -3697,13 +4148,16 @@ function closeWallpaperDialog() {
       "hidden"
     );
 
-  selectedWallpaperFile = null;
+  selectedWallpaperFile =
+    null;
 
   clearWallpaperPreviewUrl();
 
-  wallpaperInput.value = "";
+  wallpaperInput.value =
+    "";
 
-  wallpaperStatus.textContent = "";
+  wallpaperStatus.textContent =
+    "";
 
   saveWallpaperButton
     .classList
@@ -3715,8 +4169,10 @@ function closeWallpaperDialog() {
 
 function renderWallpaperModalPreview() {
 
-  wallpaperPreview.style.backgroundImage =
-    "none";
+  wallpaperPreview
+    .style
+    .backgroundImage =
+      "none";
 
   wallpaperPreview.innerHTML =
     "<span>Belum ada wallpaper</span>";
@@ -3725,10 +4181,13 @@ function renderWallpaperModalPreview() {
     selectedWallpaperPreviewUrl
   ) {
 
-    wallpaperPreview.innerHTML = "";
+    wallpaperPreview.innerHTML =
+      "";
 
-    wallpaperPreview.style.backgroundImage =
-      `url("${selectedWallpaperPreviewUrl}")`;
+    wallpaperPreview
+      .style
+      .backgroundImage =
+        `url("${selectedWallpaperPreviewUrl}")`;
 
     return;
   }
@@ -3745,10 +4204,13 @@ function renderWallpaperModalPreview() {
           .wallpaper_path
       );
 
-    wallpaperPreview.innerHTML = "";
+    wallpaperPreview.innerHTML =
+      "";
 
-    wallpaperPreview.style.backgroundImage =
-      `url("${url}")`;
+    wallpaperPreview
+      .style
+      .backgroundImage =
+        `url("${url}")`;
   }
 }
 
@@ -3759,11 +4221,14 @@ function handleWallpaperSelection() {
     wallpaperInput
       .files[0];
 
-  if (!file) {
+  if (
+    !file
+  ) {
     return;
   }
 
   const allowed = [
+
     "image/jpeg",
     "image/png",
     "image/webp",
@@ -3780,7 +4245,8 @@ function handleWallpaperSelection() {
       "Format wallpaper harus JPG, PNG, WEBP, atau GIF."
     );
 
-    wallpaperInput.value = "";
+    wallpaperInput.value =
+      "";
 
     return;
   }
@@ -3794,7 +4260,8 @@ function handleWallpaperSelection() {
       "Ukuran wallpaper maksimal 5 MB."
     );
 
-    wallpaperInput.value = "";
+    wallpaperInput.value =
+      "";
 
     return;
   }
@@ -3887,6 +4354,7 @@ async function saveWallpaper() {
           path,
           selectedWallpaperFile,
           {
+
             cacheControl:
               "3600",
 
@@ -3895,7 +4363,9 @@ async function saveWallpaper() {
           }
         );
 
-    if (uploadError) {
+    if (
+      uploadError
+    ) {
       throw uploadError;
     }
 
@@ -3923,12 +4393,10 @@ async function saveWallpaper() {
         .select()
         .single();
 
-    if (updateError) {
+    if (
+      updateError
+    ) {
 
-      /*
-       * Jangan tinggalkan file baru
-       * bila database gagal.
-       */
       await supabaseClient
         .storage
         .from(
@@ -3948,13 +4416,10 @@ async function saveWallpaper() {
       path
     );
 
-    /*
-     * Hapus wallpaper lama setelah
-     * database berhasil menunjuk file baru.
-     */
     if (
       oldPath &&
-      oldPath !== path
+      oldPath !==
+      path
     ) {
 
       await supabaseClient
@@ -3970,11 +4435,13 @@ async function saveWallpaper() {
     wallpaperStatus.textContent =
       "Wallpaper berhasil diterapkan.";
 
-    selectedWallpaperFile = null;
+    selectedWallpaperFile =
+      null;
 
     clearWallpaperPreviewUrl();
 
-    wallpaperInput.value = "";
+    wallpaperInput.value =
+      "";
 
     saveWallpaperButton
       .classList
@@ -4019,7 +4486,9 @@ async function removeWallpaper() {
           .wallpaper_path
       : null;
 
-  if (!oldPath) {
+  if (
+    !oldPath
+  ) {
 
     resetWallpaper();
 
@@ -4034,7 +4503,9 @@ async function removeWallpaper() {
       "Hapus wallpaper room ini?"
     );
 
-  if (!ok) {
+  if (
+    !ok
+  ) {
     return;
   }
 
@@ -4070,7 +4541,9 @@ async function removeWallpaper() {
         .select()
         .single();
 
-    if (error) {
+    if (
+      error
+    ) {
       throw error;
     }
 
@@ -4117,7 +4590,8 @@ function getFileExtension(
 
   const name =
     String(
-      file.name || ""
+      file.name ||
+      ""
     );
 
   const extension =
@@ -4127,6 +4601,7 @@ function getFileExtension(
       .toLowerCase();
 
   const safe = [
+
     "jpg",
     "jpeg",
     "png",
@@ -4145,22 +4620,25 @@ function getFileExtension(
 
   if (
     file.type ===
-      "image/png"
+    "image/png"
   ) {
+
     return "png";
   }
 
   if (
     file.type ===
-      "image/webp"
+    "image/webp"
   ) {
+
     return "webp";
   }
 
   if (
     file.type ===
-      "image/gif"
+    "image/gif"
   ) {
+
     return "gif";
   }
 
@@ -4174,7 +4652,9 @@ function getFileExtension(
 
 async function updateLastSeen() {
 
-  if (!currentUser) {
+  if (
+    !currentUser
+  ) {
     return;
   }
 
@@ -4182,7 +4662,9 @@ async function updateLastSeen() {
     new Date()
       .toISOString();
 
-  if (currentProfile) {
+  if (
+    currentProfile
+  ) {
 
     currentProfile.last_seen =
       now;
@@ -4192,7 +4674,9 @@ async function updateLastSeen() {
     error
   } =
     await supabaseClient
-      .from("profiles")
+      .from(
+        "profiles"
+      )
       .update({
 
         last_seen:
@@ -4203,7 +4687,9 @@ async function updateLastSeen() {
         currentUser.id
       );
 
-  if (error) {
+  if (
+    error
+  ) {
 
     console.error(
       "Last seen:",
@@ -4224,7 +4710,9 @@ async function logout() {
       "Keluar dari akun?"
     );
 
-  if (!ok) {
+  if (
+    !ok
+  ) {
     return;
   }
 
@@ -4234,7 +4722,9 @@ async function logout() {
 
   await updateLastSeen();
 
-  if (presenceChannel) {
+  if (
+    presenceChannel
+  ) {
 
     try {
 
@@ -4256,7 +4746,8 @@ async function logout() {
     lastSeenTimer
   );
 
-  currentPartner = null;
+  currentPartner =
+    null;
 
   serverMessages = [];
   pendingMessages = [];
@@ -4277,18 +4768,15 @@ window.addEventListener(
   "pagehide",
   () => {
 
-    if (!currentUser) {
+    if (
+      !currentUser
+    ) {
       return;
     }
 
-    /*
-     * Presence/WebSocket akan terputus
-     * otomatis.
-     *
-     * Tidak mengandalkan HTTP request
-     * pagehide untuk status online.
-     */
-    if (presenceChannel) {
+    if (
+      presenceChannel
+    ) {
 
       presenceChannel
         .untrack()
@@ -4301,19 +4789,22 @@ window.addEventListener(
 
 
 /* =========================================================
-   PREVIEW
+   PREVIEW TEXT
 ========================================================= */
 
 function getPreviewText(
   message
 ) {
 
-  if (!message) {
+  if (
+    !message
+  ) {
     return "";
   }
 
   if (
-    message.type === "image"
+    message.type ===
+    "image"
   ) {
 
     return "📷 Foto";
@@ -4321,7 +4812,8 @@ function getPreviewText(
 
   const content =
     String(
-      message.content || ""
+      message.content ||
+      ""
     )
       .replace(
         /\s+/g,
@@ -4329,19 +4821,24 @@ function getPreviewText(
       )
       .trim();
 
-  if (!content) {
+  if (
+    !content
+  ) {
+
     return "Pesan";
   }
 
   if (
-    content.length > 45
+    content.length >
+    45
   ) {
 
     return (
       content.slice(
         0,
         45
-      ) + "…"
+      ) +
+      "…"
     );
   }
 
@@ -4370,17 +4867,22 @@ function formatTime(
   value
 ) {
 
-  if (!value) {
+  if (
+    !value
+  ) {
     return "";
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   return date
     .toLocaleTimeString(
       "id-ID",
       {
+
         hour:
           "2-digit",
 
@@ -4395,23 +4897,29 @@ function formatLastSeen(
   value
 ) {
 
-  if (!value) {
+  if (
+    !value
+  ) {
+
     return "Offline";
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   const diff =
     Math.max(
       0,
       Date.now() -
-        date.getTime()
+      date.getTime()
     );
 
   const seconds =
     Math.floor(
-      diff / 1000
+      diff /
+      1000
     );
 
   if (
@@ -4423,7 +4931,8 @@ function formatLastSeen(
 
   const minutes =
     Math.floor(
-      seconds / 60
+      seconds /
+      60
     );
 
   if (
@@ -4439,7 +4948,8 @@ function formatLastSeen(
 
   const hours =
     Math.floor(
-      minutes / 60
+      minutes /
+      60
     );
 
   if (
@@ -4458,6 +4968,7 @@ function formatLastSeen(
     date.toLocaleString(
       "id-ID",
       {
+
         day:
           "2-digit",
 
@@ -4513,11 +5024,13 @@ showRegisterButton
     showRegister
   );
 
+
 showLoginButton
   .addEventListener(
     "click",
     showLogin
   );
+
 
 registerButton
   .addEventListener(
@@ -4525,11 +5038,13 @@ registerButton
     registerAccount
   );
 
+
 loginButton
   .addEventListener(
     "click",
     loginAccount
   );
+
 
 loginPassword
   .addEventListener(
@@ -4537,7 +5052,8 @@ loginPassword
     event => {
 
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
 
         loginAccount();
@@ -4545,13 +5061,15 @@ loginPassword
     }
   );
 
+
 registerPassword2
   .addEventListener(
     "keydown",
     event => {
 
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
 
         registerAccount();
@@ -4562,6 +5080,10 @@ registerPassword2
 
 /* =========================================================
    CHAT EVENTS
+
+   FINAL:
+   ENTER = SEND
+   SHIFT + ENTER = NEW LINE
 ========================================================= */
 
 sendButton
@@ -4589,34 +5111,44 @@ messageInput
     event => {
 
       /*
-       * Enter biasa:
-       * newline.
+       * ENTER BIASA
+       * = KIRIM PESAN
        *
-       * Ctrl + Enter:
-       * send.
-       *
-       * Cmd + Enter:
-       * send.
+       * SHIFT + ENTER
+       * = BARIS BARU
        */
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
         &&
-        (
-          event.ctrlKey ||
-          event.metaKey
-        )
+        !event.shiftKey
       ) {
 
         event.preventDefault();
 
         sendMessage();
+
+        return;
       }
 
+      /*
+       * Shift + Enter tidak dicegah.
+       * Browser otomatis membuat newline.
+       */
+
+
+      /*
+       * ESC
+       * batalkan edit / reply.
+       */
       if (
-        event.key === "Escape"
+        event.key ===
+        "Escape"
       ) {
 
-        if (editingMessage) {
+        if (
+          editingMessage
+        ) {
 
           cancelEdit();
 
@@ -4716,7 +5248,9 @@ menuReply
 
       closeMessageMenu();
 
-      if (message) {
+      if (
+        message
+      ) {
 
         startReply(
           message
@@ -4736,7 +5270,9 @@ menuCopy
 
       closeMessageMenu();
 
-      if (message) {
+      if (
+        message
+      ) {
 
         await copyMessage(
           message
@@ -4756,7 +5292,9 @@ menuEdit
 
       closeMessageMenu();
 
-      if (message) {
+      if (
+        message
+      ) {
 
         startEdit(
           message
@@ -4776,7 +5314,9 @@ menuDelete
 
       closeMessageMenu();
 
-      if (message) {
+      if (
+        message
+      ) {
 
         await deleteMessage(
           message
@@ -4811,7 +5351,7 @@ wallpaperModal
 
       if (
         event.target ===
-          wallpaperModal
+        wallpaperModal
       ) {
 
         closeWallpaperDialog();
@@ -4871,7 +5411,7 @@ document.addEventListener(
       )
       &&
       event.target !==
-        emojiButton
+      emojiButton
     ) {
 
       closeEmojiPanel();
@@ -4881,20 +5421,27 @@ document.addEventListener(
 
 
 /* =========================================================
-   VISIBILITY
+   TAB VISIBILITY
 ========================================================= */
 
 document.addEventListener(
   "visibilitychange",
   async () => {
 
+    /*
+     * User kembali membuka tab.
+     */
     if (
       document.visibilityState ===
-        "visible"
+      "visible"
     ) {
 
       await updateLastSeen();
 
+      /*
+       * Kalau conversation sedang terbuka,
+       * pesan room tersebut dianggap dibaca.
+       */
       if (
         currentPartner &&
         appScreen
@@ -4909,15 +5456,20 @@ document.addEventListener(
         await markAsRead();
       }
 
+      /*
+       * Sync unread dari database.
+       */
       await loadUsers();
 
       refreshStatusDisplay();
 
+      updateNotificationIndicator();
+
     } else {
 
       /*
-       * Jangan biarkan typing nyangkut
-       * ketika user pindah tab.
+       * User pindah tab.
+       * Matikan typing.
        */
       await sendTypingState(
         false
