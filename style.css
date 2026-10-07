@@ -1,3 +1,7 @@
+/* =========================================
+   GLOBAL
+========================================= */
+
 * {
   box-sizing: border-box;
 }
@@ -6,6 +10,7 @@ html,
 body {
   width: 100%;
   height: 100%;
+
   margin: 0;
 }
 
@@ -36,19 +41,22 @@ button {
 }
 
 
-/* =========================
-   LOGIN
-========================= */
+/* =========================================
+   LOGIN / AUTH
+========================================= */
 
 .login-screen {
   width: 100%;
   height: 100dvh;
 
   display: flex;
+
   justify-content: center;
   align-items: center;
 
   padding: 20px;
+
+  overflow-y: auto;
 
   background:
     linear-gradient(
@@ -60,11 +68,11 @@ button {
 
 .login-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 410px;
+
+  padding: 30px 28px;
 
   background: white;
-
-  padding: 35px 28px;
 
   border-radius: 20px;
 
@@ -72,29 +80,48 @@ button {
 
   box-shadow:
     0 20px 60px
-    rgba(0,0,0,.22);
+    rgba(0, 0, 0, .22);
 }
 
 .logo {
-  font-size: 55px;
+  font-size: 50px;
 }
 
 .login-card h1 {
-  margin: 12px 0 6px;
+  margin:
+    8px
+    0
+    20px;
 }
 
-.login-card p {
-  margin: 0 0 22px;
+.auth-form h2 {
+  margin:
+    0
+    0
+    5px;
+
+  font-size: 20px;
+}
+
+.auth-form p {
+  margin:
+    0
+    0
+    18px;
 
   color: #667781;
 
-  font-size: 14px;
+  font-size: 13px;
 }
 
-.login-card input {
+.auth-form input {
   width: 100%;
 
-  padding: 14px 15px;
+  margin-bottom: 10px;
+
+  padding:
+    13px
+    14px;
 
   border:
     1px solid #d6d6d6;
@@ -104,16 +131,16 @@ button {
   outline: none;
 }
 
-.login-card input:focus {
+.auth-form input:focus {
   border-color: #00a884;
 }
 
-.login-card button {
+.auth-form > button:not(.link-button) {
   width: 100%;
 
-  margin-top: 12px;
+  margin-top: 3px;
 
-  padding: 14px;
+  padding: 13px;
 
   border: 0;
 
@@ -126,20 +153,54 @@ button {
   font-weight: bold;
 }
 
+.auth-form > button:disabled {
+  opacity: .6;
+
+  cursor: not-allowed;
+}
+
 .small-status {
   min-height: 18px;
 
-  margin-top: 12px;
+  margin-top: 10px;
 
   color: #667781;
 
   font-size: 12px;
 }
 
+.small-status.error {
+  color: #d93025;
+}
 
-/* =========================
-   MAIN APP
-========================= */
+.small-status.success {
+  color: #008069;
+}
+
+.auth-switch {
+  margin-top: 15px;
+
+  color: #667781;
+
+  font-size: 12px;
+}
+
+.link-button {
+  padding: 2px 4px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #008069;
+
+  font-weight: bold;
+}
+
+
+/* =========================================
+   APP
+========================================= */
 
 .app-screen {
   width: 100%;
@@ -159,9 +220,9 @@ button {
 }
 
 
-/* =========================
+/* =========================================
    SIDEBAR
-========================= */
+========================================= */
 
 .sidebar {
   width: 340px;
@@ -177,14 +238,16 @@ button {
 }
 
 .sidebar-header {
-  min-height: 70px;
+  min-height: 76px;
 
-  padding: 12px 15px;
+  padding: 11px 15px;
 
   display: flex;
 
   align-items: center;
   justify-content: space-between;
+
+  gap: 10px;
 
   background: #f0f2f5;
 }
@@ -196,15 +259,27 @@ button {
 .my-name {
   margin-top: 4px;
 
-  color: #667781;
+  color: #41525d;
 
   font-size: 12px;
+
+  font-weight: bold;
+}
+
+.my-username {
+  margin-top: 2px;
+
+  color: #8696a0;
+
+  font-size: 10px;
 }
 
 .icon-button {
   border: 0;
 
-  padding: 8px 10px;
+  padding:
+    8px
+    10px;
 
   border-radius: 8px;
 
@@ -216,7 +291,9 @@ button {
 }
 
 .user-list-title {
-  padding: 13px 16px;
+  padding:
+    13px
+    16px;
 
   color: #667781;
 
@@ -237,7 +314,11 @@ button {
 .user-item {
   width: 100%;
 
-  padding: 12px 15px;
+  position: relative;
+
+  padding:
+    12px
+    15px;
 
   display: flex;
 
@@ -267,9 +348,13 @@ button {
   width: 45px;
   height: 45px;
 
-  flex: 0 0 45px;
+  flex:
+    0
+    0
+    45px;
 
   display: flex;
+
   justify-content: center;
   align-items: center;
 
@@ -279,16 +364,29 @@ button {
 
   color: #54656f;
 
-  font-weight: bold;
-
   font-size: 18px;
+
+  font-weight: bold;
 }
 
 .user-info {
+  flex: 1;
+
   min-width: 0;
 }
 
+.user-row-top {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 10px;
+}
+
 .user-name {
+  min-width: 0;
+
   overflow: hidden;
 
   font-weight: bold;
@@ -306,8 +404,50 @@ button {
   font-size: 11px;
 }
 
+.user-last-message {
+  margin-top: 4px;
+
+  max-width: 220px;
+
+  overflow: hidden;
+
+  color: #667781;
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.unread-badge {
+  min-width: 20px;
+  height: 20px;
+
+  padding:
+    0
+    6px;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  border-radius: 10px;
+
+  background: #00a884;
+
+  color: white;
+
+  font-size: 10px;
+
+  font-weight: bold;
+}
+
 .center-info {
-  padding: 30px 15px;
+  padding:
+    30px
+    15px;
 
   text-align: center;
 
@@ -317,9 +457,9 @@ button {
 }
 
 
-/* =========================
+/* =========================================
    CHAT PANEL
-========================= */
+========================================= */
 
 .chat-panel {
   flex: 1;
@@ -342,11 +482,11 @@ button {
   justify-content: center;
   align-items: center;
 
-  text-align: center;
+  padding: 20px;
 
   color: #667781;
 
-  padding: 20px;
+  text-align: center;
 }
 
 .empty-icon {
@@ -364,22 +504,25 @@ button {
 }
 
 
-/* =========================
+/* =========================================
    CONVERSATION
-========================= */
+========================================= */
 
 .conversation {
   width: 100%;
   height: 100%;
 
   display: flex;
+
   flex-direction: column;
 }
 
 .chat-header {
   min-height: 70px;
 
-  padding: 10px 15px;
+  padding:
+    10px
+    15px;
 
   display: flex;
 
@@ -439,9 +582,9 @@ button {
 }
 
 
-/* =========================
+/* =========================================
    MESSAGES
-========================= */
+========================================= */
 
 .messages {
   flex: 1;
@@ -472,7 +615,11 @@ button {
 }
 
 .message-bubble {
-  max-width: min(75%, 520px);
+  max-width:
+    min(
+      75%,
+      520px
+    );
 
   padding:
     7px
@@ -482,8 +629,16 @@ button {
   border-radius: 9px;
 
   box-shadow:
-    0 1px 1px
+    0
+    1px
+    1px
     rgba(0,0,0,.12);
+
+  cursor: pointer;
+}
+
+.message-bubble:active {
+  opacity: .8;
 }
 
 .mine .message-bubble {
@@ -527,10 +682,7 @@ button {
   font-size: 10px;
 }
 
-.message-status.pending {
-  color: #667781;
-}
-
+.message-status.pending,
 .message-status.sent {
   color: #667781;
 }
@@ -558,9 +710,128 @@ button {
 }
 
 
-/* =========================
+/* =========================================
+   REPLY INSIDE BUBBLE
+========================================= */
+
+.reply-preview {
+  margin-bottom: 5px;
+
+  padding:
+    6px
+    8px;
+
+  border-left:
+    3px solid #00a884;
+
+  border-radius: 5px;
+
+  background:
+    rgba(0,0,0,.05);
+}
+
+.reply-name {
+  margin-bottom: 2px;
+
+  color: #008069;
+
+  font-size: 10px;
+
+  font-weight: bold;
+}
+
+.reply-text {
+  max-width: 300px;
+
+  overflow: hidden;
+
+  color: #667781;
+
+  font-size: 11px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================
+   ACTIVE REPLY
+========================================= */
+
+.active-reply {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding:
+    7px
+    12px;
+
+  background: #f0f2f5;
+
+  border-bottom:
+    1px solid #ddd;
+}
+
+.active-reply-content {
+  flex: 1;
+
+  min-width: 0;
+
+  padding:
+    6px
+    9px;
+
+  border-left:
+    3px solid #00a884;
+
+  border-radius: 5px;
+
+  background: white;
+}
+
+.active-reply-title {
+  color: #008069;
+
+  font-size: 10px;
+
+  font-weight: bold;
+}
+
+.active-reply-text {
+  margin-top: 2px;
+
+  overflow: hidden;
+
+  color: #667781;
+
+  font-size: 11px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.cancel-reply {
+  width: 32px;
+  height: 32px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #667781;
+
+  font-size: 20px;
+}
+
+
+/* =========================================
    COMPOSER
-========================= */
+========================================= */
 
 .composer {
   min-height: 65px;
@@ -568,7 +839,10 @@ button {
   padding:
     9px
     12px
-    calc(9px + env(safe-area-inset-bottom));
+    calc(
+      9px +
+      env(safe-area-inset-bottom)
+    );
 
   display: flex;
 
@@ -584,7 +858,9 @@ button {
 
   min-width: 0;
 
-  padding: 12px 16px;
+  padding:
+    12px
+    16px;
 
   border: 0;
 
@@ -599,7 +875,10 @@ button {
   width: 44px;
   height: 44px;
 
-  flex: 0 0 44px;
+  flex:
+    0
+    0
+    44px;
 
   border: 0;
 
@@ -613,11 +892,13 @@ button {
 }
 
 
-/* =========================
+/* =========================================
    MOBILE
-========================= */
+========================================= */
 
-@media (max-width: 700px) {
+@media (
+  max-width: 700px
+) {
 
   .app-screen {
     position: relative;
@@ -664,202 +945,4 @@ button {
     max-width: 85%;
   }
 
-}
-
-/* =========================
-   V1.2 USER PREVIEW
-========================= */
-
-.user-item {
-  position: relative;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-row-top {
-  display: flex;
-
-  justify-content: space-between;
-
-  gap: 10px;
-
-  align-items: center;
-}
-
-.user-last-message {
-  margin-top: 4px;
-
-  max-width: 210px;
-
-  overflow: hidden;
-
-  color: #667781;
-
-  font-size: 12px;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-.unread-badge {
-  min-width: 20px;
-  height: 20px;
-
-  padding: 0 6px;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 10px;
-
-  background: #00a884;
-
-  color: white;
-
-  font-size: 10px;
-
-  font-weight: bold;
-}
-
-
-/* =========================
-   REPLY PREVIEW
-========================= */
-
-.reply-preview {
-  margin-bottom: 5px;
-
-  padding:
-    6px
-    8px;
-
-  border-left:
-    3px solid #00a884;
-
-  border-radius: 5px;
-
-  background:
-    rgba(0,0,0,.05);
-
-  cursor: pointer;
-}
-
-.reply-name {
-  margin-bottom: 2px;
-
-  color: #008069;
-
-  font-size: 10px;
-
-  font-weight: bold;
-}
-
-.reply-text {
-  max-width: 300px;
-
-  overflow: hidden;
-
-  color: #667781;
-
-  font-size: 11px;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-
-/* =========================
-   ACTIVE REPLY
-========================= */
-
-.active-reply {
-  display: flex;
-
-  align-items: center;
-
-  gap: 8px;
-
-  padding:
-    7px
-    12px;
-
-  background: #f0f2f5;
-
-  border-bottom:
-    1px solid #ddd;
-}
-
-.active-reply.hidden {
-  display: none;
-}
-
-.active-reply-content {
-  flex: 1;
-
-  min-width: 0;
-
-  padding:
-    6px
-    9px;
-
-  border-left:
-    3px solid #00a884;
-
-  background: white;
-
-  border-radius: 5px;
-}
-
-.active-reply-title {
-  color: #008069;
-
-  font-size: 10px;
-
-  font-weight: bold;
-}
-
-.active-reply-text {
-  margin-top: 2px;
-
-  overflow: hidden;
-
-  color: #667781;
-
-  font-size: 11px;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-.cancel-reply {
-  width: 32px;
-  height: 32px;
-
-  border: 0;
-
-  background: transparent;
-
-  color: #667781;
-
-  font-size: 20px;
-}
-
-
-/* =========================
-   CLICKABLE BUBBLE
-========================= */
-
-.message-bubble {
-  cursor: pointer;
-}
-
-.message-bubble:active {
-  opacity: .8;
 }
