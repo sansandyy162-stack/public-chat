@@ -1,25 +1,5 @@
 /* =========================================================
-   PRIVATE CHAT V1.2
-   ---------------------------------------------------------
-   FITUR:
-   - Login / register user
-   - Daftar user
-   - Online / last seen
-   - Private chat 1-to-1
-   - Optimistic message
-   - Pending
-   - Terkirim
-   - Terbaca
-   - Unread badge
-   - Last message preview
-   - Reply message
-   - Polling pesan
-   - Heartbeat user
-========================================================= */
-
-
-/* =========================================================
-   CONFIG
+   PRIVATE CHAT V1.3
 ========================================================= */
 
 const API_URL =
@@ -58,96 +38,146 @@ const loginScreen =
     "loginScreen"
   );
 
-
 const appScreen =
   document.getElementById(
     "appScreen"
   );
 
 
-const nameInput =
+/* AUTH */
+
+const loginForm =
   document.getElementById(
-    "nameInput"
+    "loginForm"
   );
 
+const registerForm =
+  document.getElementById(
+    "registerForm"
+  );
+
+const loginUsername =
+  document.getElementById(
+    "loginUsername"
+  );
+
+const loginPassword =
+  document.getElementById(
+    "loginPassword"
+  );
 
 const loginButton =
   document.getElementById(
     "loginButton"
   );
 
-
 const loginStatus =
   document.getElementById(
     "loginStatus"
   );
 
+const registerName =
+  document.getElementById(
+    "registerName"
+  );
+
+const registerUsername =
+  document.getElementById(
+    "registerUsername"
+  );
+
+const registerPassword =
+  document.getElementById(
+    "registerPassword"
+  );
+
+const registerPassword2 =
+  document.getElementById(
+    "registerPassword2"
+  );
+
+const registerButton =
+  document.getElementById(
+    "registerButton"
+  );
+
+const registerStatus =
+  document.getElementById(
+    "registerStatus"
+  );
+
+const showRegisterButton =
+  document.getElementById(
+    "showRegisterButton"
+  );
+
+const showLoginButton =
+  document.getElementById(
+    "showLoginButton"
+  );
+
+
+/* APP */
 
 const logoutButton =
   document.getElementById(
     "logoutButton"
   );
 
-
 const myName =
   document.getElementById(
     "myName"
   );
 
+const myUsername =
+  document.getElementById(
+    "myUsername"
+  );
 
 const userList =
   document.getElementById(
     "userList"
   );
 
-
 const emptyChat =
   document.getElementById(
     "emptyChat"
   );
-
 
 const conversation =
   document.getElementById(
     "conversation"
   );
 
-
 const backButton =
   document.getElementById(
     "backButton"
   );
-
 
 const partnerName =
   document.getElementById(
     "partnerName"
   );
 
-
 const partnerInitial =
   document.getElementById(
     "partnerInitial"
   );
-
 
 const partnerStatus =
   document.getElementById(
     "partnerStatus"
   );
 
-
 const messagesElement =
   document.getElementById(
     "messages"
   );
 
-
 const messageInput =
   document.getElementById(
     "messageInput"
   );
-
 
 const sendButton =
   document.getElementById(
@@ -155,27 +185,22 @@ const sendButton =
   );
 
 
-/*
-Reply elements
-*/
+/* REPLY */
 
 const activeReply =
   document.getElementById(
     "activeReply"
   );
 
-
 const activeReplyTitle =
   document.getElementById(
     "activeReplyTitle"
   );
 
-
 const activeReplyText =
   document.getElementById(
     "activeReplyText"
   );
-
 
 const cancelReplyButton =
   document.getElementById(
@@ -191,13 +216,13 @@ function init() {
 
   const saved =
     localStorage.getItem(
-      "private_chat_user"
+      "private_chat_session"
     );
 
 
   if (!saved) {
 
-    nameInput.focus();
+    showLogin();
 
     return;
 
@@ -206,21 +231,26 @@ function init() {
 
   try {
 
-    currentUser =
+    const user =
       JSON.parse(saved);
 
 
     if (
-      !currentUser ||
-      !currentUser.id ||
-      !currentUser.name
+      !user ||
+      !user.id ||
+      !user.username ||
+      !user.name
     ) {
 
       throw new Error(
-        "Data user tidak valid."
+        "Session tidak valid."
       );
 
     }
+
+
+    currentUser =
+      user;
 
 
     startApp();
@@ -228,21 +258,252 @@ function init() {
 
   } catch (error) {
 
-    console.error(
-      "Restore user:",
-      error
-    );
-
-
     localStorage.removeItem(
-      "private_chat_user"
+      "private_chat_session"
     );
 
 
     currentUser = null;
 
 
-    nameInput.focus();
+    showLogin();
+
+  }
+
+}
+
+
+/* =========================================================
+   SHOW LOGIN
+========================================================= */
+
+function showLogin() {
+
+  loginScreen.classList.remove(
+    "hidden"
+  );
+
+
+  appScreen.classList.add(
+    "hidden"
+  );
+
+
+  loginForm.classList.remove(
+    "hidden"
+  );
+
+
+  registerForm.classList.add(
+    "hidden"
+  );
+
+
+  setTimeout(
+    () =>
+      loginUsername.focus(),
+    100
+  );
+
+}
+
+
+/* =========================================================
+   SHOW REGISTER
+========================================================= */
+
+function showRegister() {
+
+  loginForm.classList.add(
+    "hidden"
+  );
+
+
+  registerForm.classList.remove(
+    "hidden"
+  );
+
+
+  loginStatus.textContent =
+    "";
+
+
+  registerStatus.textContent =
+    "";
+
+
+  setTimeout(
+    () =>
+      registerName.focus(),
+    100
+  );
+
+}
+
+
+/* =========================================================
+   REGISTER
+========================================================= */
+
+async function registerAccount() {
+
+  const name =
+    registerName.value.trim();
+
+
+  const username =
+    registerUsername
+      .value
+      .trim()
+      .toLowerCase();
+
+
+  const password =
+    registerPassword.value;
+
+
+  const password2 =
+    registerPassword2.value;
+
+
+  registerStatus.className =
+    "small-status";
+
+
+  if (
+    !name ||
+    !username ||
+    !password
+  ) {
+
+    setRegisterError(
+      "Semua data wajib diisi."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    username.length < 3
+  ) {
+
+    setRegisterError(
+      "Username minimal 3 karakter."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !/^[a-z0-9_]+$/.test(
+      username
+    )
+  ) {
+
+    setRegisterError(
+      "Username hanya boleh huruf, angka, dan underscore."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    password.length < 6
+  ) {
+
+    setRegisterError(
+      "Password minimal 6 karakter."
+    );
+
+    return;
+
+  }
+
+
+  if (
+    password !== password2
+  ) {
+
+    setRegisterError(
+      "Ulangi password tidak sama."
+    );
+
+    return;
+
+  }
+
+
+  registerButton.disabled =
+    true;
+
+
+  registerStatus.textContent =
+    "Membuat akun...";
+
+
+  try {
+
+    const data =
+      await postAPI({
+
+        action:
+          "register",
+
+        name:
+          name,
+
+        username:
+          username,
+
+        password:
+          password
+
+      });
+
+
+    if (!data.success) {
+
+      throw new Error(
+        data.message ||
+        "Gagal membuat akun."
+      );
+
+    }
+
+
+    /*
+    Register langsung login.
+    */
+
+    currentUser =
+      data.user;
+
+
+    saveSession();
+
+
+    startApp();
+
+
+  } catch (error) {
+
+    setRegisterError(
+      cleanError(
+        error.message
+      )
+    );
+
+
+  } finally {
+
+    registerButton.disabled =
+      false;
 
   }
 
@@ -253,47 +514,43 @@ function init() {
    LOGIN
 ========================================================= */
 
-async function login() {
+async function loginAccount() {
 
-  const name =
-    nameInput.value.trim();
+  const username =
+    loginUsername
+      .value
+      .trim()
+      .toLowerCase();
 
 
-  if (!name) {
+  const password =
+    loginPassword.value;
 
-    alert(
-      "Masukkan nama terlebih dahulu."
+
+  loginStatus.className =
+    "small-status";
+
+
+  if (
+    !username ||
+    !password
+  ) {
+
+    setLoginError(
+      "Username dan password wajib diisi."
     );
-
-
-    nameInput.focus();
 
     return;
 
   }
 
 
-  loginButton.disabled = true;
+  loginButton.disabled =
+    true;
 
 
   loginStatus.textContent =
-    "Mendaftarkan user...";
-
-
-  const user = {
-
-    id:
-      "USER_" +
-      Date.now() +
-      "_" +
-      Math.floor(
-        Math.random() * 100000
-      ),
-
-    name:
-      name
-
-  };
+    "Memeriksa akun...";
 
 
   try {
@@ -302,13 +559,13 @@ async function login() {
       await postAPI({
 
         action:
-          "registerUser",
+          "login",
 
-        user_id:
-          user.id,
+        username:
+          username,
 
-        name:
-          user.name
+        password:
+          password
 
       });
 
@@ -317,21 +574,21 @@ async function login() {
 
       throw new Error(
         data.message ||
-        "Gagal register user."
+        "Login gagal."
       );
 
     }
 
 
-    currentUser = user;
+    currentUser =
+      data.user;
 
 
-    localStorage.setItem(
-      "private_chat_user",
-      JSON.stringify(
-        currentUser
-      )
-    );
+    saveSession();
+
+
+    loginPassword.value =
+      "";
 
 
     loginStatus.textContent =
@@ -343,21 +600,35 @@ async function login() {
 
   } catch (error) {
 
-    console.error(
-      "Login:",
-      error
+    setLoginError(
+      cleanError(
+        error.message
+      )
     );
-
-
-    loginStatus.textContent =
-      "Gagal masuk. Coba lagi.";
 
 
   } finally {
 
-    loginButton.disabled = false;
+    loginButton.disabled =
+      false;
 
   }
+
+}
+
+
+/* =========================================================
+   SESSION
+========================================================= */
+
+function saveSession() {
+
+  localStorage.setItem(
+    "private_chat_session",
+    JSON.stringify(
+      currentUser
+    )
+  );
 
 }
 
@@ -382,19 +653,15 @@ function startApp() {
     currentUser.name;
 
 
-  /*
-  Load awal.
-  */
+  myUsername.textContent =
+    "@" +
+    currentUser.username;
+
 
   loadUsers();
 
   sendHeartbeat();
 
-
-  /*
-  Refresh daftar user setiap
-  4 detik.
-  */
 
   clearInterval(
     userTimer
@@ -407,11 +674,6 @@ function startApp() {
       4000
     );
 
-
-  /*
-  Update last seen setiap
-  15 detik.
-  */
 
   clearInterval(
     heartbeatTimer
@@ -455,68 +717,51 @@ async function loadUsers() {
       await fetch(url);
 
 
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " +
-        response.status
-      );
-
-    }
-
-
     const data =
       await response.json();
 
 
     if (!data.success) {
-
-      console.error(
-        "Get users:",
-        data.message
-      );
-
       return;
-
     }
 
 
-    renderUsers(
-      data.users || []
-    );
+    const users =
+      data.users || [];
+
+
+    renderUsers(users);
 
 
     /*
-    Update status partner
-    kalau sedang membuka chat.
+    Refresh status partner.
     */
 
     if (currentPartner) {
 
-      const freshPartner =
-        (data.users || [])
-          .find(
-            user =>
-              String(
-                user.user_id
-              ) ===
-              String(
-                currentPartner.user_id
-              )
-          );
+      const fresh =
+        users.find(
+          user =>
+            String(
+              user.user_id
+            ) ===
+            String(
+              currentPartner.user_id
+            )
+        );
 
 
-      if (freshPartner) {
+      if (fresh) {
 
         currentPartner = {
           ...currentPartner,
-          ...freshPartner
+          ...fresh
         };
 
 
         partnerStatus.textContent =
           formatLastSeen(
-            freshPartner.last_seen
+            fresh.last_seen
           );
 
       }
@@ -552,12 +797,10 @@ function renderUsers(users) {
         <div class="center-info">
           Belum ada user lain.
           <br><br>
-          Buka website ini di browser
-          atau Incognito lain untuk
-          membuat user kedua.
+          Buat akun kedua untuk
+          mulai chat.
         </div>
       `;
-
 
     return;
 
@@ -580,10 +823,6 @@ function renderUsers(users) {
       "user-item";
 
 
-    /*
-    Tandai chat aktif.
-    */
-
     if (
       currentPartner &&
       String(
@@ -601,10 +840,6 @@ function renderUsers(users) {
     }
 
 
-    /*
-    Avatar.
-    */
-
     const avatar =
       document.createElement(
         "div"
@@ -621,10 +856,6 @@ function renderUsers(users) {
       );
 
 
-    /*
-    Info container.
-    */
-
     const info =
       document.createElement(
         "div"
@@ -634,10 +865,6 @@ function renderUsers(users) {
     info.className =
       "user-info";
 
-
-    /*
-    Row nama + unread.
-    */
 
     const top =
       document.createElement(
@@ -663,22 +890,16 @@ function renderUsers(users) {
       user.name;
 
 
-    top.appendChild(
-      name
-    );
+    top.appendChild(name);
 
 
-    /*
-    UNREAD BADGE
-    */
-
-    const unreadCount =
+    const unread =
       Number(
         user.unread_count || 0
       );
 
 
-    if (unreadCount > 0) {
+    if (unread > 0) {
 
       const badge =
         document.createElement(
@@ -691,9 +912,9 @@ function renderUsers(users) {
 
 
       badge.textContent =
-        unreadCount > 99
+        unread > 99
           ? "99+"
-          : unreadCount;
+          : unread;
 
 
       top.appendChild(
@@ -703,14 +924,8 @@ function renderUsers(users) {
     }
 
 
-    info.appendChild(
-      top
-    );
+    info.appendChild(top);
 
-
-    /*
-    Last message preview.
-    */
 
     if (user.last_message) {
 
@@ -733,11 +948,6 @@ function renderUsers(users) {
       );
 
     } else {
-
-      /*
-      Kalau belum pernah chat,
-      tampilkan online / last seen.
-      */
 
       const status =
         document.createElement(
@@ -774,11 +984,8 @@ function renderUsers(users) {
 
     button.addEventListener(
       "click",
-      () => {
-
-        openChat(user);
-
-      }
+      () =>
+        openChat(user)
     );
 
 
@@ -797,10 +1004,6 @@ function renderUsers(users) {
 
 async function openChat(user) {
 
-  /*
-  Stop polling chat sebelumnya.
-  */
-
   clearInterval(
     pollTimer
   );
@@ -811,25 +1014,13 @@ async function openChat(user) {
   };
 
 
-  /*
-  Reset reply.
-  */
-
   cancelReply();
 
-
-  /*
-  Reset message conversation.
-  */
 
   serverMessages = [];
 
   pendingMessages = [];
 
-
-  /*
-  Header partner.
-  */
 
   partnerName.textContent =
     user.name;
@@ -846,10 +1037,6 @@ async function openChat(user) {
       user.last_seen
     );
 
-
-  /*
-  Tampilkan conversation.
-  */
 
   emptyChat.classList.add(
     "hidden"
@@ -874,17 +1061,13 @@ async function openChat(user) {
     `;
 
 
-  /*
-  Load pertama.
-  */
-
   await loadMessages(
     true
   );
 
 
   /*
-  Polling chat setiap 1 detik.
+  POLLING PESAN = 1 DETIK
   */
 
   pollTimer =
@@ -897,9 +1080,7 @@ async function openChat(user) {
           "visible"
         ) {
 
-          loadMessages(
-            false
-          );
+          loadMessages(false);
 
         }
 
@@ -909,19 +1090,11 @@ async function openChat(user) {
 
 
   setTimeout(
-    () => {
-
-      messageInput.focus();
-
-    },
+    () =>
+      messageInput.focus(),
     100
   );
 
-
-  /*
-  Refresh user list supaya
-  unread badge ikut berubah.
-  */
 
   loadUsers();
 
@@ -950,10 +1123,6 @@ async function loadMessages(
   loadingMessages = true;
 
 
-  /*
-  Simpan partner saat request dibuat.
-  */
-
   const partnerId =
     currentPartner.user_id;
 
@@ -979,24 +1148,9 @@ async function loadMessages(
       await fetch(url);
 
 
-    if (!response.ok) {
-
-      throw new Error(
-        "HTTP " +
-        response.status
-      );
-
-    }
-
-
     const data =
       await response.json();
 
-
-    /*
-    User mungkin pindah chat
-    sebelum request selesai.
-    */
 
     if (
       !currentPartner ||
@@ -1014,25 +1168,13 @@ async function loadMessages(
 
 
     if (!data.success) {
-
-      console.error(
-        "Get messages:",
-        data.message
-      );
-
       return;
-
     }
 
 
     serverMessages =
       data.messages || [];
 
-
-    /*
-    Cari client_id yang sudah
-    berhasil masuk database.
-    */
 
     const serverClientIds =
       new Set(
@@ -1047,20 +1189,9 @@ async function loadMessages(
       );
 
 
-    /*
-    Pending yang sudah ditemukan
-    di server tidak perlu
-    ditampilkan lagi.
-    */
-
     pendingMessages =
       pendingMessages.filter(
         message => {
-
-          /*
-          Message failed tetap
-          kita tampilkan.
-          */
 
           if (message.failed) {
             return true;
@@ -1082,12 +1213,6 @@ async function loadMessages(
     );
 
 
-    /*
-    Kalau tab aktif dan conversation
-    sedang dibuka, tandai pesan
-    partner sebagai terbaca.
-    */
-
     if (
       document.visibilityState ===
       "visible"
@@ -1108,7 +1233,8 @@ async function loadMessages(
 
   } finally {
 
-    loadingMessages = false;
+    loadingMessages =
+      false;
 
   }
 
@@ -1123,21 +1249,12 @@ function renderMessages(
   forceScroll = false
 ) {
 
-  /*
-  Cek posisi scroll sebelum
-  render ulang.
-  */
-
   const nearBottom =
     messagesElement.scrollHeight -
     messagesElement.scrollTop -
     messagesElement.clientHeight
     < 120;
 
-
-  /*
-  Gabungkan server + pending.
-  */
 
   const allMessages = [
 
@@ -1163,7 +1280,6 @@ function renderMessages(
         </div>
       `;
 
-
     return;
 
   }
@@ -1181,10 +1297,6 @@ function renderMessages(
         );
 
 
-      /*
-      MESSAGE ROW
-      */
-
       const row =
         document.createElement(
           "div"
@@ -1200,10 +1312,6 @@ function renderMessages(
         );
 
 
-      /*
-      MESSAGE BUBBLE
-      */
-
       const bubble =
         document.createElement(
           "div"
@@ -1215,9 +1323,7 @@ function renderMessages(
 
 
       /*
-      =========================
       REPLY PREVIEW
-      =========================
       */
 
       if (message.reply_to) {
@@ -1274,22 +1380,13 @@ function renderMessages(
               currentUser.id
             )
               ? "Kamu"
-              : (
-                  original.sender_name ||
-                  "User"
-                );
+              : original.sender_name;
 
 
           replyText.textContent =
-            original.content ||
-            "Pesan";
+            original.content;
 
         } else {
-
-          /*
-          Misalnya original message
-          tidak tersedia.
-          */
 
           replyName.textContent =
             "Reply";
@@ -1319,7 +1416,7 @@ function renderMessages(
 
 
       /*
-      MESSAGE TEXT
+      TEXT
       */
 
       const text =
@@ -1355,10 +1452,6 @@ function renderMessages(
         "message-meta";
 
 
-      /*
-      TIME
-      */
-
       const time =
         document.createElement(
           "span"
@@ -1375,11 +1468,6 @@ function renderMessages(
         time
       );
 
-
-      /*
-      STATUS HANYA UNTUK
-      PESAN MILIK SENDIRI
-      */
 
       if (mine) {
 
@@ -1417,11 +1505,7 @@ function renderMessages(
 
 
       /*
-      Klik bubble = Reply.
-
-      Pending message belum punya
-      server ID sehingga tidak bisa
-      dijadikan reply.
+      CLICK BUBBLE = REPLY
       */
 
       if (
@@ -1432,13 +1516,10 @@ function renderMessages(
 
         bubble.addEventListener(
           "click",
-          () => {
-
+          () =>
             startReply(
               message
-            );
-
-          }
+            )
         );
 
       }
@@ -1457,12 +1538,6 @@ function renderMessages(
   );
 
 
-  /*
-  Auto scroll hanya jika:
-  - load pertama
-  - user sebelumnya dekat bawah
-  */
-
   if (
     forceScroll ||
     nearBottom
@@ -1477,107 +1552,60 @@ function renderMessages(
 
 
 /* =========================================================
-   MESSAGE STATUS
+   STATUS MESSAGE
 ========================================================= */
 
-function getMessageState(
-  message
-) {
-
-  /*
-  Request gagal.
-  */
+function getMessageState(message) {
 
   if (message.failed) {
 
     return {
-
-      text:
-        "⚠ Gagal",
-
-      className:
-        "failed"
-
+      text: "⚠ Gagal",
+      className: "failed"
     };
 
   }
 
-
-  /*
-  Belum dikonfirmasi database.
-  */
 
   if (message.pending) {
 
     return {
-
-      text:
-        "○ Pending",
-
-      className:
-        "pending"
-
+      text: "○ Pending",
+      className: "pending"
     };
 
   }
 
-
-  /*
-  Receiver sudah membuka chat.
-  */
 
   if (message.read_at) {
 
     return {
-
-      text:
-        "✓✓ Terbaca",
-
-      className:
-        "read"
-
+      text: "✓✓ Terbaca",
+      className: "read"
     };
 
   }
 
 
-  /*
-  Sudah tersimpan database.
-  */
-
   return {
-
-    text:
-      "✓ Terkirim",
-
-    className:
-      "sent"
-
+    text: "✓ Terkirim",
+    className: "sent"
   };
 
 }
 
 
 /* =========================================================
-   START REPLY
+   REPLY
 ========================================================= */
 
-function startReply(
-  message
-) {
-
-  /*
-  Pesan harus sudah mempunyai
-  server ID.
-  */
+function startReply(message) {
 
   if (
     !message ||
     !message.id
   ) {
-
     return;
-
   }
 
 
@@ -1585,10 +1613,6 @@ function startReply(
     ...message
   };
 
-
-  /*
-  Tentukan nama di preview.
-  */
 
   const mine =
     String(
@@ -1603,15 +1627,11 @@ function startReply(
     mine
       ? "Reply ke pesan kamu"
       : "Reply ke " +
-        (
-          message.sender_name ||
-          currentPartner.name
-        );
+        message.sender_name;
 
 
   activeReplyText.textContent =
-    message.content ||
-    "Pesan";
+    message.content;
 
 
   activeReply.classList.remove(
@@ -1624,30 +1644,18 @@ function startReply(
 }
 
 
-/* =========================================================
-   CANCEL REPLY
-========================================================= */
-
 function cancelReply() {
 
   replyingTo = null;
 
 
-  if (activeReply) {
-
-    activeReply.classList.add(
-      "hidden"
-    );
-
-  }
+  activeReply.classList.add(
+    "hidden"
+  );
 
 
-  if (activeReplyText) {
-
-    activeReplyText.textContent =
-      "";
-
-  }
+  activeReplyText.textContent =
+    "";
 
 }
 
@@ -1662,9 +1670,7 @@ async function sendMessage() {
     !currentUser ||
     !currentPartner
   ) {
-
     return;
-
   }
 
 
@@ -1673,16 +1679,9 @@ async function sendMessage() {
 
 
   if (!content) {
-
     return;
-
   }
 
-
-  /*
-  Client ID dibuat sebelum
-  dikirim ke server.
-  */
 
   const clientId =
     "LOCAL_" +
@@ -1693,21 +1692,10 @@ async function sendMessage() {
     );
 
 
-  /*
-  Snapshot partner.
-
-  Penting jika user pindah chat
-  ketika request masih berjalan.
-  */
-
   const partnerSnapshot = {
     ...currentPartner
   };
 
-
-  /*
-  Snapshot reply.
-  */
 
   const replySnapshot =
     replyingTo
@@ -1717,14 +1705,9 @@ async function sendMessage() {
       : null;
 
 
-  /*
-  Local optimistic message.
-  */
-
   const localMessage = {
 
-    id:
-      "",
+    id: "",
 
     client_id:
       clientId,
@@ -1771,10 +1754,7 @@ async function sendMessage() {
 
 
   /*
-  Masukkan langsung ke UI.
-
-  INILAH YANG MEMBUAT CHAT
-  TERASA RESPONSIF.
+  Bubble langsung muncul.
   */
 
   pendingMessages.push(
@@ -1782,26 +1762,12 @@ async function sendMessage() {
   );
 
 
-  /*
-  Kosongkan input langsung.
-  */
+  messageInput.value =
+    "";
 
-  messageInput.value = "";
-
-
-  /*
-  Tutup reply mode.
-  */
 
   cancelReply();
 
-
-  /*
-  Render langsung.
-
-  User langsung melihat:
-  ○ Pending
-  */
 
   renderMessages(
     true
@@ -1810,11 +1776,6 @@ async function sendMessage() {
 
   messageInput.focus();
 
-
-  /*
-  Request database dilakukan
-  setelah bubble sudah muncul.
-  */
 
   try {
 
@@ -1859,18 +1820,11 @@ async function sendMessage() {
     if (!data.success) {
 
       throw new Error(
-        data.message ||
-        "Pesan gagal dikirim."
+        data.message
       );
 
     }
 
-
-    /*
-    Kalau conversation yang sedang
-    dibuka masih partner yang sama,
-    ambil versi database.
-    */
 
     if (
       currentPartner &&
@@ -1889,36 +1843,22 @@ async function sendMessage() {
     }
 
 
-    /*
-    Refresh last message
-    di sidebar.
-    */
-
     loadUsers();
 
 
   } catch (error) {
 
     console.error(
-      "Send message:",
+      "Send:",
       error
     );
 
 
-    /*
-    Cari optimistic message
-    berdasarkan client ID.
-    */
-
     const message =
       pendingMessages.find(
         item =>
-          String(
-            item.client_id
-          ) ===
-          String(
-            clientId
-          )
+          item.client_id ===
+          clientId
       );
 
 
@@ -1927,33 +1867,15 @@ async function sendMessage() {
       message.pending =
         false;
 
-
       message.failed =
         true;
 
     }
 
 
-    /*
-    Hanya render jika user
-    masih membuka partner sama.
-    */
-
-    if (
-      currentPartner &&
-      String(
-        currentPartner.user_id
-      ) ===
-      String(
-        partnerSnapshot.user_id
-      )
-    ) {
-
-      renderMessages(
-        true
-      );
-
-    }
+    renderMessages(
+      true
+    );
 
   }
 
@@ -1961,7 +1883,7 @@ async function sendMessage() {
 
 
 /* =========================================================
-   MARK AS READ
+   MARK READ
 ========================================================= */
 
 async function markAsRead() {
@@ -1970,16 +1892,9 @@ async function markAsRead() {
     !currentUser ||
     !currentPartner
   ) {
-
     return;
-
   }
 
-
-  /*
-  Cari pesan dari partner
-  yang belum read.
-  */
 
   const unreadExists =
     serverMessages.some(
@@ -2007,15 +1922,8 @@ async function markAsRead() {
     );
 
 
-  /*
-  Tidak ada unread.
-  Tidak perlu POST.
-  */
-
   if (!unreadExists) {
-
     return;
-
   }
 
 
@@ -2041,15 +1949,9 @@ async function markAsRead() {
 
 
     if (!data.success) {
-
       return;
-
     }
 
-
-    /*
-    User mungkin sudah pindah chat.
-    */
 
     if (
       !currentPartner ||
@@ -2060,41 +1962,35 @@ async function markAsRead() {
         partnerId
       )
     ) {
-
       return;
-
     }
 
-
-    /*
-    Update read_at lokal.
-    */
 
     serverMessages.forEach(
       message => {
 
-        const fromPartner =
+        if (
+
           String(
             message.sender_id
           ) ===
           String(
             partnerId
-          );
+          )
 
+          &&
 
-        const toMe =
           String(
             message.receiver_id
           ) ===
           String(
             currentUser.id
-          );
+          )
 
+          &&
 
-        if (
-          fromPartner &&
-          toMe &&
           !message.read_at
+
         ) {
 
           message.read_at =
@@ -2107,11 +2003,6 @@ async function markAsRead() {
       }
     );
 
-
-    /*
-    Refresh sidebar supaya
-    unread badge hilang.
-    */
 
     loadUsers();
 
@@ -2135,9 +2026,7 @@ async function markAsRead() {
 async function sendHeartbeat() {
 
   if (!currentUser) {
-
     return;
-
   }
 
 
@@ -2167,12 +2056,10 @@ async function sendHeartbeat() {
 
 
 /* =========================================================
-   POST API
+   API
 ========================================================= */
 
-async function postAPI(
-  payload
-) {
+async function postAPI(payload) {
 
   const response =
     await fetch(
@@ -2181,14 +2068,6 @@ async function postAPI(
 
         method:
           "POST",
-
-        /*
-        Sengaja tidak menggunakan
-        custom Content-Type.
-
-        Ini membantu request GAS
-        tetap sederhana.
-        */
 
         body:
           JSON.stringify(
@@ -2199,33 +2078,60 @@ async function postAPI(
     );
 
 
-  if (!response.ok) {
-
-    throw new Error(
-      "HTTP " +
-      response.status
-    );
-
-  }
-
-
   return response.json();
 
 }
 
 
 /* =========================================================
-   INITIAL
+   AUTH ERRORS
 ========================================================= */
 
-function getInitial(
-  name
-) {
+function setLoginError(message) {
+
+  loginStatus.className =
+    "small-status error";
+
+
+  loginStatus.textContent =
+    message;
+
+}
+
+
+function setRegisterError(message) {
+
+  registerStatus.className =
+    "small-status error";
+
+
+  registerStatus.textContent =
+    message;
+
+}
+
+
+function cleanError(message) {
+
+  return String(
+    message || "Terjadi kesalahan."
+  )
+    .replace(
+      /^Error:\s*/i,
+      ""
+    );
+
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getInitial(name) {
 
   if (!name) {
-
     return "?";
-
   }
 
 
@@ -2237,25 +2143,15 @@ function getInitial(
 }
 
 
-/* =========================================================
-   FORMAT TIME
-========================================================= */
-
-function formatTime(
-  value
-) {
+function formatTime(value) {
 
   if (!value) {
-
     return "";
-
   }
 
 
   const date =
-    new Date(
-      value
-    );
+    new Date(value);
 
 
   if (
@@ -2263,9 +2159,7 @@ function formatTime(
       date.getTime()
     )
   ) {
-
     return "";
-
   }
 
 
@@ -2286,13 +2180,7 @@ function formatTime(
 }
 
 
-/* =========================================================
-   FORMAT LAST SEEN
-========================================================= */
-
-function formatLastSeen(
-  value
-) {
+function formatLastSeen(value) {
 
   if (!value) {
 
@@ -2302,9 +2190,7 @@ function formatLastSeen(
 
 
   const date =
-    new Date(
-      value
-    );
+    new Date(value);
 
 
   const time =
@@ -2314,9 +2200,7 @@ function formatLastSeen(
   if (
     Number.isNaN(time)
   ) {
-
     return "";
-
   }
 
 
@@ -2324,13 +2208,6 @@ function formatLastSeen(
     Date.now() -
     time;
 
-
-  /*
-  Heartbeat = 15 detik.
-
-  Di bawah 30 detik
-  dianggap online.
-  */
 
   if (
     diff < 30000
@@ -2395,7 +2272,7 @@ function formatLastSeen(
 
 
 /* =========================================================
-   CLOSE MOBILE CHAT
+   BACK MOBILE
 ========================================================= */
 
 function closeMobileChat() {
@@ -2405,17 +2282,8 @@ function closeMobileChat() {
   );
 
 
-  /*
-  Batal reply kalau kembali
-  ke daftar user.
-  */
-
   cancelReply();
 
-
-  /*
-  Refresh unread.
-  */
 
   loadUsers();
 
@@ -2428,22 +2296,16 @@ function closeMobileChat() {
 
 function logout() {
 
-  const confirmLogout =
+  const ok =
     confirm(
-      "Keluar dari akun chat ini?"
+      "Keluar dari akun?"
     );
 
 
-  if (!confirmLogout) {
-
+  if (!ok) {
     return;
-
   }
 
-
-  /*
-  Stop semua timer.
-  */
 
   clearInterval(
     pollTimer
@@ -2461,11 +2323,14 @@ function logout() {
 
 
   /*
-  Hapus user lokal.
+  Hanya session browser yang
+  dihapus.
+
+  AKUN DI DATABASE TIDAK DIHAPUS.
   */
 
   localStorage.removeItem(
-    "private_chat_user"
+    "private_chat_session"
   );
 
 
@@ -2473,10 +2338,6 @@ function logout() {
 
   currentPartner = null;
 
-
-  /*
-  Reload supaya kembali login.
-  */
 
   location.reload();
 
@@ -2487,145 +2348,136 @@ function logout() {
    EVENTS
 ========================================================= */
 
-
-/*
-LOGIN BUTTON
-*/
-
-loginButton.addEventListener(
-  "click",
-  login
-);
+showRegisterButton
+  .addEventListener(
+    "click",
+    showRegister
+  );
 
 
-/*
-ENTER DI LOGIN
-*/
-
-nameInput.addEventListener(
-  "keydown",
-  event => {
-
-    if (
-      event.key ===
-      "Enter"
-    ) {
-
-      event.preventDefault();
-
-      login();
-
-    }
-
-  }
-);
+showLoginButton
+  .addEventListener(
+    "click",
+    showLogin
+  );
 
 
-/*
-SEND BUTTON
-*/
-
-sendButton.addEventListener(
-  "click",
-  sendMessage
-);
+registerButton
+  .addEventListener(
+    "click",
+    registerAccount
+  );
 
 
-/*
-ENTER UNTUK SEND
-*/
+loginButton
+  .addEventListener(
+    "click",
+    loginAccount
+  );
 
-messageInput.addEventListener(
-  "keydown",
-  event => {
 
-    if (
-      event.key ===
-      "Enter"
-    ) {
+loginPassword
+  .addEventListener(
+    "keydown",
+    event => {
 
-      event.preventDefault();
+      if (
+        event.key === "Enter"
+      ) {
 
-      sendMessage();
+        loginAccount();
+
+      }
 
     }
-
-  }
-);
+  );
 
 
-/*
-BACK MOBILE
-*/
+registerPassword2
+  .addEventListener(
+    "keydown",
+    event => {
 
-backButton.addEventListener(
-  "click",
-  closeMobileChat
-);
+      if (
+        event.key === "Enter"
+      ) {
 
+        registerAccount();
 
-/*
-LOGOUT
-*/
+      }
 
-logoutButton.addEventListener(
-  "click",
-  logout
-);
+    }
+  );
 
 
-/*
-CANCEL REPLY
-*/
+sendButton
+  .addEventListener(
+    "click",
+    sendMessage
+  );
 
-if (cancelReplyButton) {
 
-  cancelReplyButton.addEventListener(
+messageInput
+  .addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter"
+      ) {
+
+        event.preventDefault();
+
+        sendMessage();
+
+      }
+
+    }
+  );
+
+
+backButton
+  .addEventListener(
+    "click",
+    closeMobileChat
+  );
+
+
+logoutButton
+  .addEventListener(
+    "click",
+    logout
+  );
+
+
+cancelReplyButton
+  .addEventListener(
     "click",
     cancelReply
   );
 
-}
-
 
 /* =========================================================
-   TAB VISIBILITY
+   TAB ACTIVE
 ========================================================= */
 
 document.addEventListener(
   "visibilitychange",
   () => {
 
-    /*
-    Ketika user kembali membuka
-    browser/tab.
-    */
-
     if (
       document.visibilityState ===
       "visible"
     ) {
 
-      /*
-      Update status online.
-      */
-
       sendHeartbeat();
-
-
-      /*
-      Refresh user + unread.
-      */
 
       loadUsers();
 
 
-      /*
-      Kalau sedang membuka chat,
-      langsung cek pesan baru.
-      */
-
-      if (currentPartner) {
+      if (
+        currentPartner
+      ) {
 
         loadMessages(
           false
@@ -2640,7 +2492,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   START APPLICATION
+   START
 ========================================================= */
 
 init();
