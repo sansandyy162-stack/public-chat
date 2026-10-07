@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   >
 
   <meta
@@ -14,40 +13,29 @@
     content="#075e54"
   >
 
-  <title>Public Chat</title>
+  <title>Private Chat</title>
 
-  <link
-    rel="stylesheet"
-    href="style.css"
-  >
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <!-- =========================
-       LOGIN
-  ========================== -->
+  <!-- LOGIN -->
+  <section id="loginScreen" class="login-screen">
 
-  <div
-    id="loginScreen"
-    class="login-screen"
-  >
+    <div class="login-card">
 
-    <div class="login-box">
+      <div class="logo">💬</div>
 
-      <div class="login-icon">
-        💬
-      </div>
-
-      <h1>Public Chat</h1>
+      <h1>Private Chat</h1>
 
       <p>
-        Masukkan nama kamu untuk mulai ngobrol.
+        Masukkan nama kamu untuk mulai chat.
       </p>
 
       <input
-        type="text"
         id="nameInput"
+        type="text"
         placeholder="Nama kamu"
         maxlength="30"
         autocomplete="off"
@@ -57,91 +45,178 @@
         id="loginButton"
         type="button"
       >
-        Masuk Chat
+        Masuk
       </button>
+
+      <div
+        id="loginStatus"
+        class="small-status"
+      ></div>
 
     </div>
 
-  </div>
+  </section>
 
 
-  <!-- =========================
-       CHAT APP
-  ========================== -->
-
-  <div
-    id="chatApp"
-    class="chat-app hidden"
+  <!-- APP -->
+  <section
+    id="appScreen"
+    class="app-screen hidden"
   >
 
-    <!-- HEADER -->
+    <!-- SIDEBAR / USER LIST -->
+    <aside
+      id="sidebar"
+      class="sidebar"
+    >
 
-    <header class="chat-header">
+      <header class="sidebar-header">
 
-      <div class="header-info">
+        <div>
+          <div class="app-title">
+            💬 Private Chat
+          </div>
 
-        <div class="header-title">
-          💬 Public Chat
+          <div
+            id="myName"
+            class="my-name"
+          ></div>
         </div>
 
-        <div id="currentUser">
-          -
+        <button
+          id="logoutButton"
+          class="icon-button"
+          type="button"
+          title="Keluar"
+        >
+          Keluar
+        </button>
+
+      </header>
+
+
+      <div class="user-list-title">
+        Pilih pengguna
+      </div>
+
+
+      <div
+        id="userList"
+        class="user-list"
+      >
+
+        <div class="center-info">
+          Memuat user...
         </div>
 
       </div>
 
-
-      <button
-        id="logoutButton"
-        class="logout-button"
-        type="button"
-      >
-        Keluar
-      </button>
-
-    </header>
+    </aside>
 
 
-    <!-- MESSAGE AREA -->
-
+    <!-- CHAT PANEL -->
     <main
-      id="messages"
-      class="messages"
+      id="chatPanel"
+      class="chat-panel"
     >
 
-      <div class="loading">
-        Memuat pesan...
+      <!-- EMPTY STATE -->
+
+      <div
+        id="emptyChat"
+        class="empty-chat"
+      >
+
+        <div class="empty-icon">
+          💬
+        </div>
+
+        <h2>Private Chat</h2>
+
+        <p>
+          Pilih pengguna untuk mulai percakapan.
+        </p>
+
+      </div>
+
+
+      <!-- ACTIVE CONVERSATION -->
+
+      <div
+        id="conversation"
+        class="conversation hidden"
+      >
+
+        <header class="chat-header">
+
+          <button
+            id="backButton"
+            class="back-button"
+            type="button"
+          >
+            ←
+          </button>
+
+
+          <div class="partner-avatar">
+            <span id="partnerInitial">
+              ?
+            </span>
+          </div>
+
+
+          <div class="partner-info">
+
+            <div
+              id="partnerName"
+              class="partner-name"
+            ></div>
+
+            <div
+              id="partnerStatus"
+              class="partner-status"
+            >
+              -
+            </div>
+
+          </div>
+
+        </header>
+
+
+        <div
+          id="messages"
+          class="messages"
+        ></div>
+
+
+        <footer class="composer">
+
+          <input
+            id="messageInput"
+            type="text"
+            maxlength="1000"
+            placeholder="Ketik pesan..."
+            autocomplete="off"
+          >
+
+          <button
+            id="sendButton"
+            type="button"
+          >
+            ➤
+          </button>
+
+        </footer>
+
       </div>
 
     </main>
 
-
-    <!-- INPUT AREA -->
-
-    <footer class="chat-input-area">
-
-      <input
-        id="messageInput"
-        type="text"
-        placeholder="Ketik pesan..."
-        maxlength="1000"
-        autocomplete="off"
-      >
-
-      <button
-        id="sendButton"
-        type="button"
-      >
-        Kirim
-      </button>
-
-    </footer>
-
-  </div>
+  </section>
 
 
   <script src="app.js"></script>
 
 </body>
-
 </html>
