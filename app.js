@@ -1486,24 +1486,19 @@ function getUserStatus(
 /* =========================================================
    RENDER USERS
 ========================================================= */
-
 function renderUsers() {
 
-  userList.innerHTML =
-    "";
+  userList.innerHTML = "";
 
-  if (
-    !profiles.length
-  ) {
+  if (!profiles.length) {
 
-    userList.innerHTML =
-      `
-        <div class="center-info">
-          Belum ada user lain.
-          <br><br>
-          Daftarkan akun kedua.
-        </div>
-      `;
+    userList.innerHTML = `
+      <div class="center-info">
+        Belum ada user lain.
+        <br><br>
+        Daftarkan akun kedua.
+      </div>
+    `;
 
     updateNotificationIndicator();
 
@@ -1518,22 +1513,25 @@ function renderUsers() {
           "button"
         );
 
-      button.type =
-        "button";
+      button.type = "button";
 
       button.className =
         "user-item";
 
       if (
         currentPartner &&
-        currentPartner.id ===
-        user.id
+        currentPartner.id === user.id
       ) {
 
         button.classList.add(
           "active"
         );
       }
+
+
+      /* =========================
+         AVATAR
+      ========================== */
 
       const avatar =
         document.createElement(
@@ -1548,6 +1546,11 @@ function renderUsers() {
           user.name
         );
 
+
+      /* =========================
+         USER INFO
+      ========================== */
+
       const info =
         document.createElement(
           "div"
@@ -1556,6 +1559,11 @@ function renderUsers() {
       info.className =
         "user-info";
 
+
+      /* =========================
+         TOP ROW
+      ========================== */
+
       const top =
         document.createElement(
           "div"
@@ -1563,6 +1571,20 @@ function renderUsers() {
 
       top.className =
         "user-row-top";
+
+
+      /* =========================
+         NAME + ONLINE DOT
+      ========================== */
+
+      const nameWrap =
+        document.createElement(
+          "div"
+        );
+
+      nameWrap.className =
+        "user-name-wrap";
+
 
       const name =
         document.createElement(
@@ -1575,19 +1597,55 @@ function renderUsers() {
       name.textContent =
         user.name;
 
-      top.appendChild(
+      nameWrap.appendChild(
         name
       );
 
+
+      /*
+       * ONLINE
+       *
+       * Tidak lagi menulis "Online".
+       * Cukup tampilkan titik hijau.
+       */
+      if (
+        isUserOnline(
+          user.id
+        )
+      ) {
+
+        const onlineDot =
+          document.createElement(
+            "span"
+          );
+
+        onlineDot.className =
+          "online-dot";
+
+        onlineDot.title =
+          "Online";
+
+        nameWrap.appendChild(
+          onlineDot
+        );
+      }
+
+
+      top.appendChild(
+        nameWrap
+      );
+
+
+      /* =========================
+         UNREAD BADGE
+      ========================== */
+
       const unread =
         Number(
-          user.unread_count ||
-          0
+          user.unread_count || 0
         );
 
-      if (
-        unread > 0
-      ) {
+      if (unread > 0) {
 
         const badge =
           document.createElement(
@@ -1600,60 +1658,57 @@ function renderUsers() {
         badge.textContent =
           unread > 99
             ? "99+"
-            : String(
-                unread
-              );
+            : String(unread);
 
         top.appendChild(
           badge
         );
       }
 
+
       info.appendChild(
         top
       );
 
-      const status =
+
+      /* =========================
+         LAST CHAT
+      ========================== */
+
+      const lastMessage =
         document.createElement(
           "div"
         );
 
-      if (
-        isUserOnline(
-          user.id
-        )
-      ) {
+      lastMessage.className =
+        "user-last-message";
 
-        status.className =
-          "user-status";
+      /*
+       * Baris kedua SELALU last chat.
+       *
+       * Online/offline tidak mengganti
+       * preview pesan lagi.
+       */
+      if (user.last_message) {
 
-        status.textContent =
-          "Online";
-
-      } else if (
-        user.last_message
-      ) {
-
-        status.className =
-          "user-last-message";
-
-        status.textContent =
+        lastMessage.textContent =
           user.last_message;
 
       } else {
 
-        status.className =
-          "user-status";
-
-        status.textContent =
-          getUserStatus(
-            user
-          );
+        lastMessage.textContent =
+          "Belum ada pesan";
       }
 
+
       info.appendChild(
-        status
+        lastMessage
       );
+
+
+      /* =========================
+         BUILD USER
+      ========================== */
 
       button.appendChild(
         avatar
@@ -1663,13 +1718,17 @@ function renderUsers() {
         info
       );
 
+
       button.addEventListener(
         "click",
-        () =>
+        () => {
+
           openChat(
             user
-          )
+          );
+        }
       );
+
 
       userList.appendChild(
         button
@@ -1677,9 +1736,9 @@ function renderUsers() {
     }
   );
 
+
   updateNotificationIndicator();
 }
-
 
 /* =========================================================
    OPEN CHAT
