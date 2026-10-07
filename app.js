@@ -940,7 +940,6 @@ async function loadUsers() {
 /* =========================================================
    PREVIEWS + UNREAD
 ========================================================= */
-
 async function loadUserPreviews() {
 
   if (!currentUser) {
@@ -949,19 +948,18 @@ async function loadUserPreviews() {
 
   const rendered = [];
 
-  for (
-    const profile
-    of profiles
-  ) {
+  for (const profile of profiles) {
+
+    /* =========================
+       AMBIL PESAN TERAKHIR
+    ========================== */
 
     const {
       data: lastMessages,
       error: lastError
     } =
       await supabaseClient
-        .from(
-          "messages"
-        )
+        .from("messages")
         .select("*")
         .or(
           `and(sender_id.eq.${currentUser.id},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${currentUser.id})`
@@ -974,6 +972,7 @@ async function loadUserPreviews() {
         )
         .limit(1);
 
+
     if (lastError) {
 
       console.error(
@@ -982,14 +981,17 @@ async function loadUserPreviews() {
       );
     }
 
+
+    /* =========================
+       HITUNG UNREAD
+    ========================== */
+
     const {
       count,
       error: countError
     } =
       await supabaseClient
-        .from(
-          "messages"
-        )
+        .from("messages")
         .select(
           "id",
           {
@@ -1010,6 +1012,7 @@ async function loadUserPreviews() {
           null
         );
 
+
     if (countError) {
 
       console.error(
@@ -1018,11 +1021,17 @@ async function loadUserPreviews() {
       );
     }
 
+
+    /* =========================
+       PESAN TERAKHIR
+    ========================== */
+
     const last =
       lastMessages &&
-      lastMessages.length
+      lastMessages.length > 0
         ? lastMessages[0]
         : null;
+
 
     rendered.push({
 
@@ -1033,10 +1042,8 @@ async function loadUserPreviews() {
 
       last_message:
         last
-          ? getPreviewText(
-              last
-            )
-          : "",
+          ? getPreviewText(last)
+          : "Belum ada pesan",
 
       last_message_at:
         last
@@ -1045,8 +1052,10 @@ async function loadUserPreviews() {
     });
   }
 
+
   profiles =
     rendered;
+
 
   sortProfiles();
 
@@ -1054,7 +1063,6 @@ async function loadUserPreviews() {
 
   updateNotificationIndicator();
 }
-
 
 /* =========================================================
    SORT USERS
