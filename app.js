@@ -44,6 +44,9 @@ const supabaseClient =
 const APP_TITLE =
   "Private Chat";
 
+const CHAT_IMAGE_BUCKET =
+  "chat-wallpapers";
+
 const DEFAULT_FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
 
@@ -87,6 +90,9 @@ let currentRoomSettings = null;
 
 let selectedWallpaperFile = null;
 let selectedWallpaperPreviewUrl = null;
+
+let pastedImageFile = null;
+let pastedImagePreviewUrl = null;
 
 
 /* =========================================================
@@ -361,6 +367,21 @@ const wallpaperStatus =
 const appFavicon =
   document.getElementById(
     "appFavicon"
+  );
+
+const imagePastePreview =
+  document.getElementById(
+    "imagePastePreview"
+  );
+
+const imagePastePreviewImage =
+  document.getElementById(
+    "imagePastePreviewImage"
+  );
+
+const cancelImagePasteButton =
+  document.getElementById(
+    "cancelImagePasteButton"
   );
 
 
@@ -1794,6 +1815,8 @@ async function openChat(
   remoteUserTyping =
     false;
 
+  clearPastedImage();
+
   partnerName.textContent =
     currentPartner.name;
 
@@ -2663,6 +2686,126 @@ function reconcilePending() {
    SEND MESSAGE
 ========================================================= */
 
+function clearPastedImage() {
+
+  pastedImageFile =
+    null;
+
+  if (
+    pastedImagePreviewUrl
+  ) {
+
+    URL.revokeObjectURL(
+      pastedImagePreviewUrl
+    );
+  }
+
+  pastedImagePreviewUrl =
+    null;
+
+  imagePastePreviewImage.removeAttribute(
+    "src"
+  );
+
+  imagePastePreview
+    .classList
+    .add(
+      "hidden"
+    );
+}
+
+
+function showPastedImage(
+  file
+) {
+
+  clearPastedImage();
+
+  pastedImageFile =
+    file;
+
+  pastedImagePreviewUrl =
+    URL.createObjectURL(
+      file
+    );
+
+  imagePastePreviewImage.src =
+    pastedImagePreviewUrl;
+
+  imagePastePreview
+    .classList
+    .remove(
+      "hidden"
+    );
+}
+
+
+async function uploadPastedImage(
+  file
+) {
+
+  if (
+    !currentRoomId
+  ) {
+    throw new Error(
+      "Ruang chat belum siap."
+    );
+  }
+
+  const extension =
+    getFileExtension(
+      file
+    );
+
+  const path =
+    "messages/" +
+    currentRoomId +
+    "/" +
+    crypto.randomUUID() +
+    "." +
+    extension;
+
+  const {
+    error: uploadError
+  } =
+    await supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .upload(
+        path,
+        file,
+        {
+          cacheControl:
+            "3600",
+
+          upsert:
+            false
+        }
+      );
+
+  if (
+    uploadError
+  ) {
+    throw uploadError;
+  }
+
+  const {
+    data
+  } =
+    supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .getPublicUrl(
+        path
+      );
+
+  return data.publicUrl;
+}
+
 async function sendMessage() {
 
   if (
@@ -2678,7 +2821,8 @@ async function sendMessage() {
       .trim();
 
   if (
-    !content
+    !content &&
+    !pastedImageFile
   ) {
     return;
   }
@@ -2697,6 +2841,52 @@ async function sendMessage() {
     );
 
     return;
+  }
+
+  const imageFile =
+    pastedImageFile;
+
+  let type =
+    "text";
+
+  let imageUrl =
+    null;
+
+  if (
+    imageFile
+  ) {
+
+    sendButton.disabled =
+      true;
+
+    try {
+
+      imageUrl =
+        await uploadPastedImage(
+          imageFile
+        );
+
+      type =
+        "image";
+
+    } catch (error) {
+
+      console.error(
+        "Image upload:",
+        error
+      );
+
+      alert(
+        "Gambar gagal diunggah. Coba lagi."
+      );
+
+      return;
+
+    } finally {
+
+      sendButton.disabled =
+        false;
+    }
   }
 
   await sendTypingState(
@@ -2729,13 +2919,12 @@ async function sendMessage() {
     receiver_id:
       partnerSnapshot.id,
 
-    type:
-      "text",
+    type,
 
     content,
 
     image_url:
-      null,
+      imageUrl,
 
     reply_to:
       replyId,
@@ -2797,10 +2986,12 @@ async function sendMessage() {
         receiver_id:
           partnerSnapshot.id,
 
-        type:
-          "text",
+        type,
 
         content,
+
+        image_url:
+          imageUrl,
 
         reply_to:
           replyId
@@ -2845,6 +3036,13 @@ async function sendMessage() {
   if (
     data
   ) {
+
+    if (
+      imageFile
+    ) {
+
+      clearPastedImage();
+    }
 
     if (
       currentPartner &&
@@ -3112,7 +3310,9 @@ function renderMessages(
                 : "User";
 
           replyText.textContent =
-            original.content;
+            getPreviewText(
+              original
+            );
 
         } else {
 
@@ -3138,7 +3338,42 @@ function renderMessages(
 
 
       /* =========================
-         MESSAGE TEXT
+         MESSAGE IMAGE
+      ========================== */
+
+      if (
+        message.type ===
+        "image"
+        &&
+        message.image_url
+      ) {
+
+        const image =
+          document.createElement(
+            "img"
+          );
+
+        image.className =
+          "message-image";
+
+        image.src =
+          message.image_url;
+
+        image.alt =
+          message.content ||
+          "Gambar chat";
+
+        image.loading =
+          "lazy";
+
+        bubble.appendChild(
+          image
+        );
+      }
+
+
+      /* =========================
+         MESSAGE TEXT / CAPTION
       ========================== */
 
       const text =
@@ -3149,12 +3384,17 @@ function renderMessages(
       text.className =
         "message-text";
 
-      text.textContent =
-        message.content;
+      if (
+        message.content
+      ) {
 
-      bubble.appendChild(
-        text
-      );
+        text.textContent =
+          message.content;
+
+        bubble.appendChild(
+          text
+        );
+      }
 
 
       /* =========================
@@ -5174,6 +5414,91 @@ messageInput
 
 messageInput
   .addEventListener(
+    "paste",
+    event => {
+
+      const items =
+        Array.from(
+          event.clipboardData
+            ? event.clipboardData.items
+            : []
+        );
+
+      const imageItem =
+        items.find(
+          item =>
+            item.type &&
+            item.type.startsWith(
+              "image/"
+            )
+        );
+
+      if (
+        !imageItem
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (
+        editingMessage
+      ) {
+
+        alert(
+          "Selesaikan edit pesan terlebih dahulu."
+        );
+
+        return;
+      }
+
+      const file =
+        imageItem.getAsFile();
+
+      const allowed = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ];
+
+      if (
+        !file ||
+        !allowed.includes(
+          file.type
+        )
+      ) {
+
+        alert(
+          "Format gambar harus JPG, PNG, WEBP, atau GIF."
+        );
+
+        return;
+      }
+
+      if (
+        file.size >
+        5 * 1024 * 1024
+      ) {
+
+        alert(
+          "Ukuran gambar maksimal 5 MB."
+        );
+
+        return;
+      }
+
+      showPastedImage(
+        file
+      );
+
+      messageInput.focus();
+    }
+  );
+
+
+messageInput
+  .addEventListener(
     "keydown",
     event => {
 
@@ -5241,6 +5566,18 @@ cancelEditButton
   .addEventListener(
     "click",
     cancelEdit
+  );
+
+
+cancelImagePasteButton
+  .addEventListener(
+    "click",
+    () => {
+
+      clearPastedImage();
+
+      messageInput.focus();
+    }
   );
 
 

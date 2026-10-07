@@ -649,6 +649,22 @@ button {
   overflow-wrap: anywhere;
 }
 
+.message-image {
+  width: 100%;
+  max-width: 360px;
+  max-height: 420px;
+
+  display: block;
+
+  border-radius: 7px;
+
+  object-fit: contain;
+}
+
+.message-image + .message-text:not(:empty) {
+  margin-top: 7px;
+}
+
 .message-meta {
   margin-top: 4px;
 
@@ -893,6 +909,67 @@ button {
   align-items: flex-end;
 
   background: #f0f2f5;
+}
+
+.image-paste-preview {
+  min-height: 64px;
+
+  padding: 8px 12px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  border-top: 1px solid #dfe3e5;
+
+  background: #f0f2f5;
+}
+
+.image-paste-preview img {
+  width: 48px;
+  height: 48px;
+
+  border-radius: 7px;
+
+  object-fit: cover;
+}
+
+.image-paste-preview-copy {
+  flex: 1;
+  min-width: 0;
+
+  display: grid;
+
+  gap: 2px;
+}
+
+.image-paste-preview-copy strong {
+  color: #111b21;
+
+  font-size: 12px;
+}
+
+.image-paste-preview-copy span {
+  color: #667781;
+
+  font-size: 11px;
+}
+
+.image-paste-cancel {
+  width: 32px;
+  height: 32px;
+
+  flex: 0 0 32px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: white;
+
+  color: #54656f;
+
+  font-size: 21px;
 }
 
 .composer textarea {
