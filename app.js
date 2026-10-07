@@ -1,9 +1,26 @@
 /* =========================================================
-   PRIVATE CHAT V1.3
+   PRIVATE CHAT
+   SUPABASE REALTIME V2
 ========================================================= */
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbwsFKdn6NIFTbfYKW-AsdgjJX0uPK7KfpHaEAq8wilOis4ZX1prZW-X6qPBrP1p7AQp/exec";
+
+/* =========================================================
+   SUPABASE CONFIG
+========================================================= */
+
+const SUPABASE_URL =
+  "https://wsbwhnkarhwqwlgrtxgp.supabase.co";
+
+
+const SUPABASE_KEY =
+  "sb_publishable_hbKTQ8whgf8Lc6wMDxYr_Q_gBGGKvEe";
+
+
+const supabaseClient =
+  window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
 
 
 /* =========================================================
@@ -12,7 +29,11 @@ const API_URL =
 
 let currentUser = null;
 
+let currentProfile = null;
+
 let currentPartner = null;
+
+let profiles = [];
 
 let serverMessages = [];
 
@@ -20,13 +41,9 @@ let pendingMessages = [];
 
 let replyingTo = null;
 
-let pollTimer = null;
-
-let userTimer = null;
+let realtimeChannel = null;
 
 let heartbeatTimer = null;
-
-let loadingMessages = false;
 
 
 /* =========================================================
@@ -56,9 +73,9 @@ const registerForm =
     "registerForm"
   );
 
-const loginUsername =
+const loginEmail =
   document.getElementById(
-    "loginUsername"
+    "loginEmail"
   );
 
 const loginPassword =
@@ -76,14 +93,15 @@ const loginStatus =
     "loginStatus"
   );
 
+
 const registerName =
   document.getElementById(
     "registerName"
   );
 
-const registerUsername =
+const registerEmail =
   document.getElementById(
-    "registerUsername"
+    "registerEmail"
   );
 
 const registerPassword =
@@ -106,6 +124,7 @@ const registerStatus =
     "registerStatus"
   );
 
+
 const showRegisterButton =
   document.getElementById(
     "showRegisterButton"
@@ -119,19 +138,19 @@ const showLoginButton =
 
 /* APP */
 
-const logoutButton =
-  document.getElementById(
-    "logoutButton"
-  );
-
 const myName =
   document.getElementById(
     "myName"
   );
 
-const myUsername =
+const myEmail =
   document.getElementById(
-    "myUsername"
+    "myEmail"
+  );
+
+const logoutButton =
+  document.getElementById(
+    "logoutButton"
   );
 
 const userList =
@@ -149,11 +168,6 @@ const conversation =
     "conversation"
   );
 
-const backButton =
-  document.getElementById(
-    "backButton"
-  );
-
 const partnerName =
   document.getElementById(
     "partnerName"
@@ -167,6 +181,11 @@ const partnerInitial =
 const partnerStatus =
   document.getElementById(
     "partnerStatus"
+  );
+
+const backButton =
+  document.getElementById(
+    "backButton"
   );
 
 const messagesElement =
@@ -212,15 +231,20 @@ const cancelReplyButton =
    INIT
 ========================================================= */
 
-function init() {
+async function init() {
 
-  const saved =
-    localStorage.getItem(
-      "private_chat_session"
-    );
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .auth
+      .getSession();
 
 
-  if (!saved) {
+  if (error) {
+
+    console.error(error);
 
     showLogin();
 
@@ -229,52 +253,61 @@ function init() {
   }
 
 
-  try {
-
-    const user =
-      JSON.parse(saved);
-
-
-    if (
-      !user ||
-      !user.id ||
-      !user.username ||
-      !user.name
-    ) {
-
-      throw new Error(
-        "Session tidak valid."
-      );
-
-    }
-
+  if (
+    data.session
+  ) {
 
     currentUser =
-      user;
+      data.session.user;
 
 
-    startApp();
+    await startApp();
 
-
-  } catch (error) {
-
-    localStorage.removeItem(
-      "private_chat_session"
-    );
-
-
-    currentUser = null;
-
+  } else {
 
     showLogin();
 
   }
 
+
+  /*
+  Supabase mengelola session sendiri.
+  Tidak perlu localStorage buatan kita.
+  */
+
+  supabaseClient
+    .auth
+    .onAuthStateChange(
+      async (
+        event,
+        session
+      ) => {
+
+        if (
+          event ===
+          "SIGNED_OUT"
+        ) {
+
+          cleanupRealtime();
+
+          currentUser = null;
+
+          currentProfile = null;
+
+          currentPartner = null;
+
+          showLogin();
+
+        }
+
+      }
+    );
+
 }
 
 
 /* =========================================================
-   SHOW LOGIN
+   AUTH UI
 ========================================================= */
 
 function showLogin() {
@@ -299,18 +332,18 @@ function showLogin() {
   );
 
 
+  loginStatus.textContent =
+    "";
+
+
   setTimeout(
     () =>
-      loginUsername.focus(),
+      loginEmail.focus(),
     100
   );
 
 }
 
-
-/* =========================================================
-   SHOW REGISTER
-========================================================= */
 
 function showRegister() {
 
@@ -348,11 +381,13 @@ function showRegister() {
 async function registerAccount() {
 
   const name =
-    registerName.value.trim();
+    registerName
+      .value
+      .trim();
 
 
-  const username =
-    registerUsername
+  const email =
+    registerEmail
       .value
       .trim()
       .toLowerCase();
@@ -372,40 +407,12 @@ async function registerAccount() {
 
   if (
     !name ||
-    !username ||
+    !email ||
     !password
   ) {
 
     setRegisterError(
       "Semua data wajib diisi."
-    );
-
-    return;
-
-  }
-
-
-  if (
-    username.length < 3
-  ) {
-
-    setRegisterError(
-      "Username minimal 3 karakter."
-    );
-
-    return;
-
-  }
-
-
-  if (
-    !/^[a-z0-9_]+$/.test(
-      username
-    )
-  ) {
-
-    setRegisterError(
-      "Username hanya boleh huruf, angka, dan underscore."
     );
 
     return;
@@ -449,54 +456,73 @@ async function registerAccount() {
 
   try {
 
-    const data =
-      await postAPI({
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .auth
+        .signUp({
 
-        action:
-          "register",
+          email:
+            email,
 
-        name:
-          name,
+          password:
+            password,
 
-        username:
-          username,
+          options: {
 
-        password:
-          password
+            data: {
+              name:
+                name
+            }
 
-      });
+          }
+
+        });
 
 
-    if (!data.success) {
+    if (error) {
+      throw error;
+    }
 
-      throw new Error(
-        data.message ||
-        "Gagal membuat akun."
-      );
+
+    /*
+    Jika email confirmation dimatikan,
+    session langsung tersedia.
+    */
+
+    if (
+      data.session
+    ) {
+
+      currentUser =
+        data.user;
+
+
+      await startApp();
+
+      return;
 
     }
 
 
     /*
-    Register langsung login.
+    Jika confirmation email aktif.
     */
 
-    currentUser =
-      data.user;
+    registerStatus.className =
+      "small-status success";
 
 
-    saveSession();
-
-
-    startApp();
+    registerStatus.textContent =
+      "Akun dibuat. Cek email untuk konfirmasi, lalu login.";
 
 
   } catch (error) {
 
     setRegisterError(
-      cleanError(
-        error.message
-      )
+      error.message
     );
 
 
@@ -516,8 +542,8 @@ async function registerAccount() {
 
 async function loginAccount() {
 
-  const username =
-    loginUsername
+  const email =
+    loginEmail
       .value
       .trim()
       .toLowerCase();
@@ -527,17 +553,13 @@ async function loginAccount() {
     loginPassword.value;
 
 
-  loginStatus.className =
-    "small-status";
-
-
   if (
-    !username ||
+    !email ||
     !password
   ) {
 
     setLoginError(
-      "Username dan password wajib diisi."
+      "Email dan password wajib diisi."
     );
 
     return;
@@ -549,42 +571,40 @@ async function loginAccount() {
     true;
 
 
+  loginStatus.className =
+    "small-status";
+
+
   loginStatus.textContent =
-    "Memeriksa akun...";
+    "Masuk...";
 
 
   try {
 
-    const data =
-      await postAPI({
+    const {
+      data,
+      error
+    } =
+      await supabaseClient
+        .auth
+        .signInWithPassword({
 
-        action:
-          "login",
+          email:
+            email,
 
-        username:
-          username,
+          password:
+            password
 
-        password:
-          password
-
-      });
+        });
 
 
-    if (!data.success) {
-
-      throw new Error(
-        data.message ||
-        "Login gagal."
-      );
-
+    if (error) {
+      throw error;
     }
 
 
     currentUser =
       data.user;
-
-
-    saveSession();
 
 
     loginPassword.value =
@@ -595,15 +615,13 @@ async function loginAccount() {
       "";
 
 
-    startApp();
+    await startApp();
 
 
   } catch (error) {
 
     setLoginError(
-      cleanError(
-        error.message
-      )
+      error.message
     );
 
 
@@ -618,26 +636,15 @@ async function loginAccount() {
 
 
 /* =========================================================
-   SESSION
-========================================================= */
-
-function saveSession() {
-
-  localStorage.setItem(
-    "private_chat_session",
-    JSON.stringify(
-      currentUser
-    )
-  );
-
-}
-
-
-/* =========================================================
    START APP
 ========================================================= */
 
-function startApp() {
+async function startApp() {
+
+  if (!currentUser) {
+    return;
+  }
+
 
   loginScreen.classList.add(
     "hidden"
@@ -649,30 +656,36 @@ function startApp() {
   );
 
 
-  myName.textContent =
-    currentUser.name;
+  const ok =
+    await loadMyProfile();
 
 
-  myUsername.textContent =
-    "@" +
-    currentUser.username;
+  if (!ok) {
 
-
-  loadUsers();
-
-  sendHeartbeat();
-
-
-  clearInterval(
-    userTimer
-  );
-
-
-  userTimer =
-    setInterval(
-      loadUsers,
-      4000
+    alert(
+      "Profile tidak ditemukan."
     );
+
+    return;
+
+  }
+
+
+  myName.textContent =
+    currentProfile.name;
+
+
+  myEmail.textContent =
+    currentUser.email || "";
+
+
+  await updateLastSeen();
+
+
+  await loadUsers();
+
+
+  subscribeRealtime();
 
 
   clearInterval(
@@ -680,11 +693,60 @@ function startApp() {
   );
 
 
+  /*
+  Heartbeat bukan polling message.
+
+  Hanya update last_seen.
+  */
+
   heartbeatTimer =
     setInterval(
-      sendHeartbeat,
-      15000
+      updateLastSeen,
+      20000
     );
+
+}
+
+
+/* =========================================================
+   MY PROFILE
+========================================================= */
+
+async function loadMyProfile() {
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "profiles"
+      )
+      .select("*")
+      .eq(
+        "id",
+        currentUser.id
+      )
+      .single();
+
+
+  if (error) {
+
+    console.error(
+      "Profile:",
+      error
+    );
+
+    return false;
+
+  }
+
+
+  currentProfile =
+    data;
+
+
+  return true;
 
 }
 
@@ -700,83 +762,177 @@ async function loadUsers() {
   }
 
 
-  try {
-
-    const url =
-      API_URL +
-      "?action=getUsers" +
-      "&current_user_id=" +
-      encodeURIComponent(
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "profiles"
+      )
+      .select("*")
+      .neq(
+        "id",
         currentUser.id
-      ) +
-      "&t=" +
-      Date.now();
+      )
+      .order(
+        "name",
+        {
+          ascending: true
+        }
+      );
 
 
-    const response =
-      await fetch(url);
-
-
-    const data =
-      await response.json();
-
-
-    if (!data.success) {
-      return;
-    }
-
-
-    const users =
-      data.users || [];
-
-
-    renderUsers(users);
-
-
-    /*
-    Refresh status partner.
-    */
-
-    if (currentPartner) {
-
-      const fresh =
-        users.find(
-          user =>
-            String(
-              user.user_id
-            ) ===
-            String(
-              currentPartner.user_id
-            )
-        );
-
-
-      if (fresh) {
-
-        currentPartner = {
-          ...currentPartner,
-          ...fresh
-        };
-
-
-        partnerStatus.textContent =
-          formatLastSeen(
-            fresh.last_seen
-          );
-
-      }
-
-    }
-
-
-  } catch (error) {
+  if (error) {
 
     console.error(
-      "Load users:",
+      "Users:",
       error
     );
 
+    return;
+
   }
+
+
+  profiles =
+    data || [];
+
+
+  await loadUserPreviews();
+
+}
+
+
+/* =========================================================
+   USER PREVIEWS + UNREAD
+========================================================= */
+
+async function loadUserPreviews() {
+
+  const rendered = [];
+
+
+  for (
+    const profile
+    of profiles
+  ) {
+
+    /*
+    Last message conversation.
+    */
+
+    const {
+      data: lastMessages
+    } =
+      await supabaseClient
+        .from(
+          "messages"
+        )
+        .select("*")
+        .or(
+          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${profile.id}),and(sender_id.eq.${profile.id},receiver_id.eq.${currentUser.id})`
+        )
+        .order(
+          "created_at",
+          {
+            ascending: false
+          }
+        )
+        .limit(1);
+
+
+    /*
+    Unread count.
+    */
+
+    const {
+      count
+    } =
+      await supabaseClient
+        .from(
+          "messages"
+        )
+        .select(
+          "id",
+          {
+            count: "exact",
+            head: true
+          }
+        )
+        .eq(
+          "sender_id",
+          profile.id
+        )
+        .eq(
+          "receiver_id",
+          currentUser.id
+        )
+        .is(
+          "read_at",
+          null
+        );
+
+
+    const last =
+      lastMessages &&
+      lastMessages.length
+        ? lastMessages[0]
+        : null;
+
+
+    rendered.push({
+
+      ...profile,
+
+      unread_count:
+        count || 0,
+
+      last_message:
+        last
+          ? last.content
+          : "",
+
+      last_message_at:
+        last
+          ? last.created_at
+          : ""
+
+    });
+
+  }
+
+
+  rendered.sort(
+    (a, b) => {
+
+      const aTime =
+        a.last_message_at
+          ? new Date(
+              a.last_message_at
+            ).getTime()
+          : 0;
+
+
+      const bTime =
+        b.last_message_at
+          ? new Date(
+              b.last_message_at
+            ).getTime()
+          : 0;
+
+
+      return bTime - aTime;
+
+    }
+  );
+
+
+  profiles =
+    rendered;
+
+
+  renderUsers();
 
 }
 
@@ -785,20 +941,20 @@ async function loadUsers() {
    RENDER USERS
 ========================================================= */
 
-function renderUsers(users) {
+function renderUsers() {
 
-  userList.innerHTML = "";
+  userList.innerHTML =
+    "";
 
 
-  if (!users.length) {
+  if (!profiles.length) {
 
     userList.innerHTML =
       `
         <div class="center-info">
           Belum ada user lain.
           <br><br>
-          Buat akun kedua untuk
-          mulai chat.
+          Daftarkan akun kedua.
         </div>
       `;
 
@@ -807,147 +963,124 @@ function renderUsers(users) {
   }
 
 
-  users.forEach(user => {
+  profiles.forEach(
+    user => {
 
-    const button =
-      document.createElement(
-        "button"
-      );
-
-
-    button.type =
-      "button";
+      const button =
+        document.createElement(
+          "button"
+        );
 
 
-    button.className =
-      "user-item";
+      button.type =
+        "button";
 
 
-    if (
-      currentPartner &&
-      String(
-        currentPartner.user_id
-      ) ===
-      String(
-        user.user_id
-      )
-    ) {
-
-      button.classList.add(
-        "active"
-      );
-
-    }
+      button.className =
+        "user-item";
 
 
-    const avatar =
-      document.createElement(
-        "div"
-      );
+      if (
+        currentPartner &&
+        currentPartner.id ===
+        user.id
+      ) {
+
+        button.classList.add(
+          "active"
+        );
+
+      }
 
 
-    avatar.className =
-      "avatar";
-
-
-    avatar.textContent =
-      getInitial(
-        user.name
-      );
-
-
-    const info =
-      document.createElement(
-        "div"
-      );
-
-
-    info.className =
-      "user-info";
-
-
-    const top =
-      document.createElement(
-        "div"
-      );
-
-
-    top.className =
-      "user-row-top";
-
-
-    const name =
-      document.createElement(
-        "div"
-      );
-
-
-    name.className =
-      "user-name";
-
-
-    name.textContent =
-      user.name;
-
-
-    top.appendChild(name);
-
-
-    const unread =
-      Number(
-        user.unread_count || 0
-      );
-
-
-    if (unread > 0) {
-
-      const badge =
+      const avatar =
         document.createElement(
           "div"
         );
 
 
-      badge.className =
-        "unread-badge";
+      avatar.className =
+        "avatar";
 
 
-      badge.textContent =
-        unread > 99
-          ? "99+"
-          : unread;
+      avatar.textContent =
+        getInitial(
+          user.name
+        );
+
+
+      const info =
+        document.createElement(
+          "div"
+        );
+
+
+      info.className =
+        "user-info";
+
+
+      const top =
+        document.createElement(
+          "div"
+        );
+
+
+      top.className =
+        "user-row-top";
+
+
+      const name =
+        document.createElement(
+          "div"
+        );
+
+
+      name.className =
+        "user-name";
+
+
+      name.textContent =
+        user.name;
 
 
       top.appendChild(
-        badge
+        name
       );
 
-    }
+
+      if (
+        Number(
+          user.unread_count
+        ) > 0
+      ) {
+
+        const badge =
+          document.createElement(
+            "div"
+          );
 
 
-    info.appendChild(top);
+        badge.className =
+          "unread-badge";
 
 
-    if (user.last_message) {
+        badge.textContent =
+          user.unread_count > 99
+            ? "99+"
+            : user.unread_count;
 
-      const preview =
-        document.createElement(
-          "div"
+
+        top.appendChild(
+          badge
         );
 
-
-      preview.className =
-        "user-last-message";
-
-
-      preview.textContent =
-        user.last_message;
+      }
 
 
       info.appendChild(
-        preview
+        top
       );
 
-    } else {
 
       const status =
         document.createElement(
@@ -955,45 +1088,61 @@ function renderUsers(users) {
         );
 
 
-      status.className =
-        "user-status";
+      if (
+        user.last_message
+      ) {
+
+        status.className =
+          "user-last-message";
 
 
-      status.textContent =
-        formatLastSeen(
-          user.last_seen
-        );
+        status.textContent =
+          user.last_message;
+
+      } else {
+
+        status.className =
+          "user-status";
+
+
+        status.textContent =
+          formatLastSeen(
+            user.last_seen
+          );
+
+      }
 
 
       info.appendChild(
         status
       );
 
+
+      button.appendChild(
+        avatar
+      );
+
+
+      button.appendChild(
+        info
+      );
+
+
+      button.addEventListener(
+        "click",
+        () =>
+          openChat(
+            user
+          )
+      );
+
+
+      userList.appendChild(
+        button
+      );
+
     }
-
-
-    button.appendChild(
-      avatar
-    );
-
-
-    button.appendChild(
-      info
-    );
-
-
-    button.addEventListener(
-      "click",
-      () =>
-        openChat(user)
-    );
-
-
-    userList.appendChild(
-      button
-    );
-
-  });
+  );
 
 }
 
@@ -1004,22 +1153,17 @@ function renderUsers(users) {
 
 async function openChat(user) {
 
-  clearInterval(
-    pollTimer
-  );
-
-
   currentPartner = {
     ...user
   };
 
 
-  cancelReply();
-
-
   serverMessages = [];
 
   pendingMessages = [];
+
+
+  cancelReply();
 
 
   partnerName.textContent =
@@ -1061,39 +1205,366 @@ async function openChat(user) {
     `;
 
 
-  await loadMessages(
+  await loadMessages();
+
+
+  await markAsRead();
+
+
+  messageInput.focus();
+
+}
+
+
+/* =========================================================
+   LOAD HISTORY
+========================================================= */
+
+async function loadMessages() {
+
+  if (
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+
+  const partnerId =
+    currentPartner.id;
+
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .select("*")
+      .or(
+        `and(sender_id.eq.${currentUser.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${currentUser.id})`
+      )
+      .order(
+        "created_at",
+        {
+          ascending: true
+        }
+      );
+
+
+  if (error) {
+
+    console.error(
+      "Messages:",
+      error
+    );
+
+    return;
+
+  }
+
+
+  if (
+    !currentPartner ||
+    currentPartner.id !==
+    partnerId
+  ) {
+    return;
+  }
+
+
+  serverMessages =
+    data || [];
+
+
+  reconcilePending();
+
+
+  renderMessages(
     true
   );
 
+}
 
-  /*
-  POLLING PESAN = 1 DETIK
-  */
 
-  pollTimer =
-    setInterval(
-      () => {
+/* =========================================================
+   REALTIME
+========================================================= */
 
-        if (
-          currentPartner &&
-          document.visibilityState ===
-          "visible"
-        ) {
+function subscribeRealtime() {
 
-          loadMessages(false);
+  cleanupRealtime();
+
+
+  realtimeChannel =
+    supabaseClient
+      .channel(
+        "private-chat-realtime-" +
+        currentUser.id
+      )
+
+
+      /*
+      MESSAGE INSERT
+      */
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event:
+            "INSERT",
+
+          schema:
+            "public",
+
+          table:
+            "messages"
+
+        },
+
+        payload => {
+
+          handleRealtimeInsert(
+            payload.new
+          );
 
         }
 
-      },
-      1000
+      )
+
+
+      /*
+      READ RECEIPT UPDATE
+      */
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event:
+            "UPDATE",
+
+          schema:
+            "public",
+
+          table:
+            "messages"
+
+        },
+
+        payload => {
+
+          handleRealtimeUpdate(
+            payload.new
+          );
+
+        }
+
+      )
+
+
+      /*
+      LAST SEEN
+      */
+
+      .on(
+
+        "postgres_changes",
+
+        {
+          event:
+            "UPDATE",
+
+          schema:
+            "public",
+
+          table:
+            "profiles"
+
+        },
+
+        payload => {
+
+          handleProfileUpdate(
+            payload.new
+          );
+
+        }
+
+      )
+
+
+      .subscribe(
+        status => {
+
+          console.log(
+            "Realtime:",
+            status
+          );
+
+        }
+      );
+
+}
+
+
+/* =========================================================
+   REALTIME INSERT
+========================================================= */
+
+function handleRealtimeInsert(
+  message
+) {
+
+  if (!currentUser) {
+    return;
+  }
+
+
+  const involvesMe =
+
+    message.sender_id ===
+    currentUser.id
+
+    ||
+
+    message.receiver_id ===
+    currentUser.id;
+
+
+  if (!involvesMe) {
+    return;
+  }
+
+
+  /*
+  Kalau pesan sedang berada
+  di conversation yang terbuka.
+  */
+
+  if (
+    currentPartner &&
+    (
+      (
+        message.sender_id ===
+        currentUser.id
+
+        &&
+
+        message.receiver_id ===
+        currentPartner.id
+      )
+
+      ||
+
+      (
+        message.sender_id ===
+        currentPartner.id
+
+        &&
+
+        message.receiver_id ===
+        currentUser.id
+      )
+    )
+  ) {
+
+    const exists =
+      serverMessages.some(
+        item =>
+          item.id ===
+          message.id
+      );
+
+
+    if (!exists) {
+
+      serverMessages.push(
+        message
+      );
+
+    }
+
+
+    reconcilePending();
+
+
+    renderMessages(
+      true
     );
 
 
-  setTimeout(
-    () =>
-      messageInput.focus(),
-    100
-  );
+    /*
+    Kalau pesan masuk dari partner
+    dan tab sedang terlihat:
+    langsung read.
+    */
+
+    if (
+      message.sender_id ===
+      currentPartner.id
+
+      &&
+
+      document.visibilityState ===
+      "visible"
+    ) {
+
+      markAsRead();
+
+    }
+
+  }
+
+
+  /*
+  Update sidebar.
+  */
+
+  loadUsers();
+
+}
+
+
+/* =========================================================
+   REALTIME UPDATE
+========================================================= */
+
+function handleRealtimeUpdate(
+  message
+) {
+
+  if (!currentUser) {
+    return;
+  }
+
+
+  const index =
+    serverMessages.findIndex(
+      item =>
+        item.id ===
+        message.id
+    );
+
+
+  if (
+    index !== -1
+  ) {
+
+    serverMessages[index] =
+      message;
+
+
+    renderMessages(
+      false
+    );
+
+  }
 
 
   loadUsers();
@@ -1102,139 +1573,377 @@ async function openChat(user) {
 
 
 /* =========================================================
-   LOAD MESSAGES
+   PROFILE REALTIME
 ========================================================= */
 
-async function loadMessages(
-  forceScroll = false
+function handleProfileUpdate(
+  profile
 ) {
+
+  const index =
+    profiles.findIndex(
+      item =>
+        item.id ===
+        profile.id
+    );
+
+
+  if (
+    index !== -1
+  ) {
+
+    profiles[index] = {
+
+      ...profiles[index],
+
+      ...profile
+
+    };
+
+  }
+
+
+  if (
+    currentPartner &&
+    currentPartner.id ===
+    profile.id
+  ) {
+
+    currentPartner = {
+
+      ...currentPartner,
+
+      ...profile
+
+    };
+
+
+    partnerStatus.textContent =
+      formatLastSeen(
+        profile.last_seen
+      );
+
+  }
+
+}
+
+
+/* =========================================================
+   CLEANUP REALTIME
+========================================================= */
+
+function cleanupRealtime() {
+
+  if (
+    realtimeChannel
+  ) {
+
+    supabaseClient
+      .removeChannel(
+        realtimeChannel
+      );
+
+
+    realtimeChannel =
+      null;
+
+  }
+
+}
+
+
+/* =========================================================
+   RECONCILE OPTIMISTIC
+========================================================= */
+
+function reconcilePending() {
+
+  const serverClientIds =
+    new Set(
+
+      serverMessages.map(
+        message =>
+          message.client_id
+      )
+
+    );
+
+
+  pendingMessages =
+    pendingMessages.filter(
+      message =>
+        !serverClientIds.has(
+          message.client_id
+        )
+    );
+
+}
+
+
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
+
+async function sendMessage() {
 
   if (
     !currentUser ||
-    !currentPartner ||
-    loadingMessages
+    !currentPartner
   ) {
+    return;
+  }
+
+
+  const content =
+    messageInput
+      .value
+      .trim();
+
+
+  if (!content) {
+    return;
+  }
+
+
+  const clientId =
+    crypto.randomUUID();
+
+
+  const partnerSnapshot = {
+    ...currentPartner
+  };
+
+
+  const replyId =
+    replyingTo
+      ? replyingTo.id
+      : null;
+
+
+  const optimistic = {
+
+    id:
+      null,
+
+    client_id:
+      clientId,
+
+    sender_id:
+      currentUser.id,
+
+    receiver_id:
+      partnerSnapshot.id,
+
+    type:
+      "text",
+
+    content:
+      content,
+
+    image_url:
+      null,
+
+    reply_to:
+      replyId,
+
+    created_at:
+      new Date()
+        .toISOString(),
+
+    read_at:
+      null,
+
+    pending:
+      true,
+
+    failed:
+      false
+
+  };
+
+
+  pendingMessages.push(
+    optimistic
+  );
+
+
+  messageInput.value =
+    "";
+
+
+  cancelReply();
+
+
+  renderMessages(
+    true
+  );
+
+
+  messageInput.focus();
+
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .insert({
+
+        client_id:
+          clientId,
+
+        sender_id:
+          currentUser.id,
+
+        receiver_id:
+          partnerSnapshot.id,
+
+        type:
+          "text",
+
+        content:
+          content,
+
+        reply_to:
+          replyId
+
+      })
+      .select()
+      .single();
+
+
+  if (error) {
+
+    console.error(
+      "Send:",
+      error
+    );
+
+
+    const failed =
+      pendingMessages.find(
+        item =>
+          item.client_id ===
+          clientId
+      );
+
+
+    if (failed) {
+
+      failed.pending =
+        false;
+
+      failed.failed =
+        true;
+
+    }
+
+
+    renderMessages(
+      true
+    );
+
 
     return;
 
   }
 
 
-  loadingMessages = true;
+  /*
+  Tidak perlu menunggu realtime
+  untuk mengubah pending.
+  */
+
+  if (data) {
+
+    const exists =
+      serverMessages.some(
+        item =>
+          item.id ===
+          data.id
+      );
 
 
-  const partnerId =
-    currentPartner.user_id;
+    if (!exists) {
 
-
-  try {
-
-    const url =
-      API_URL +
-      "?action=getMessages" +
-      "&user_id=" +
-      encodeURIComponent(
-        currentUser.id
-      ) +
-      "&partner_id=" +
-      encodeURIComponent(
-        partnerId
-      ) +
-      "&t=" +
-      Date.now();
-
-
-    const response =
-      await fetch(url);
-
-
-    const data =
-      await response.json();
-
-
-    if (
-      !currentPartner ||
-      String(
-        currentPartner.user_id
-      ) !==
-      String(
-        partnerId
-      )
-    ) {
-
-      return;
+      serverMessages.push(
+        data
+      );
 
     }
 
 
-    if (!data.success) {
-      return;
-    }
-
-
-    serverMessages =
-      data.messages || [];
-
-
-    const serverClientIds =
-      new Set(
-
-        serverMessages.map(
-          message =>
-            String(
-              message.client_id || ""
-            )
-        )
-
-      );
-
-
-    pendingMessages =
-      pendingMessages.filter(
-        message => {
-
-          if (message.failed) {
-            return true;
-          }
-
-
-          return !serverClientIds.has(
-            String(
-              message.client_id
-            )
-          );
-
-        }
-      );
+    reconcilePending();
 
 
     renderMessages(
-      forceScroll
+      true
     );
 
+  }
 
-    if (
-      document.visibilityState ===
-      "visible"
-    ) {
-
-      await markAsRead();
-
-    }
+}
 
 
-  } catch (error) {
+/* =========================================================
+   MARK READ
+========================================================= */
+
+async function markAsRead() {
+
+  if (
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+
+  if (
+    document.visibilityState !==
+    "visible"
+  ) {
+    return;
+  }
+
+
+  const {
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .update({
+
+        read_at:
+          new Date()
+            .toISOString()
+
+      })
+      .eq(
+        "sender_id",
+        currentPartner.id
+      )
+      .eq(
+        "receiver_id",
+        currentUser.id
+      )
+      .is(
+        "read_at",
+        null
+      );
+
+
+  if (error) {
 
     console.error(
-      "Load messages:",
+      "Read:",
       error
     );
-
-
-  } finally {
-
-    loadingMessages =
-      false;
 
   }
 
@@ -1265,6 +1974,21 @@ function renderMessages(
   ];
 
 
+  allMessages.sort(
+    (a, b) =>
+
+      new Date(
+        a.created_at
+      ).getTime()
+
+      -
+
+      new Date(
+        b.created_at
+      ).getTime()
+  );
+
+
   messagesElement.innerHTML =
     "";
 
@@ -1289,12 +2013,8 @@ function renderMessages(
     message => {
 
       const mine =
-        String(
-          message.sender_id
-        ) ===
-        String(
-          currentUser.id
-        );
+        message.sender_id ===
+        currentUser.id;
 
 
       const row =
@@ -1326,17 +2046,15 @@ function renderMessages(
       REPLY PREVIEW
       */
 
-      if (message.reply_to) {
+      if (
+        message.reply_to
+      ) {
 
         const original =
           allMessages.find(
             item =>
-              String(
-                item.id
-              ) ===
-              String(
-                message.reply_to
-              )
+              item.id ===
+              message.reply_to
           );
 
 
@@ -1373,14 +2091,12 @@ function renderMessages(
         if (original) {
 
           replyName.textContent =
-            String(
-              original.sender_id
-            ) ===
-            String(
-              currentUser.id
-            )
+            original.sender_id ===
+            currentUser.id
               ? "Kamu"
-              : original.sender_name;
+              : currentPartner
+                ? currentPartner.name
+                : "User";
 
 
           replyText.textContent =
@@ -1415,10 +2131,6 @@ function renderMessages(
       }
 
 
-      /*
-      TEXT
-      */
-
       const text =
         document.createElement(
           "div"
@@ -1430,17 +2142,13 @@ function renderMessages(
 
 
       text.textContent =
-        message.content || "";
+        message.content;
 
 
       bubble.appendChild(
         text
       );
 
-
-      /*
-      META
-      */
 
       const meta =
         document.createElement(
@@ -1460,7 +2168,7 @@ function renderMessages(
 
       time.textContent =
         formatTime(
-          message.timestamp
+          message.created_at
         );
 
 
@@ -1503,10 +2211,6 @@ function renderMessages(
         meta
       );
 
-
-      /*
-      CLICK BUBBLE = REPLY
-      */
 
       if (
         message.id &&
@@ -1552,44 +2256,64 @@ function renderMessages(
 
 
 /* =========================================================
-   STATUS MESSAGE
+   MESSAGE STATUS
 ========================================================= */
 
-function getMessageState(message) {
+function getMessageState(
+  message
+) {
 
-  if (message.failed) {
+  if (
+    message.failed
+  ) {
 
     return {
-      text: "⚠ Gagal",
-      className: "failed"
+      text:
+        "⚠ Gagal",
+
+      className:
+        "failed"
     };
 
   }
 
 
-  if (message.pending) {
+  if (
+    message.pending
+  ) {
 
     return {
-      text: "○ Pending",
-      className: "pending"
+      text:
+        "○ Pending",
+
+      className:
+        "pending"
     };
 
   }
 
 
-  if (message.read_at) {
+  if (
+    message.read_at
+  ) {
 
     return {
-      text: "✓✓ Terbaca",
-      className: "read"
+      text:
+        "✓✓ Terbaca",
+
+      className:
+        "read"
     };
 
   }
 
 
   return {
-    text: "✓ Terkirim",
-    className: "sent"
+    text:
+      "✓ Terkirim",
+
+    className:
+      "sent"
   };
 
 }
@@ -1599,35 +2323,25 @@ function getMessageState(message) {
    REPLY
 ========================================================= */
 
-function startReply(message) {
-
-  if (
-    !message ||
-    !message.id
-  ) {
-    return;
-  }
-
+function startReply(
+  message
+) {
 
   replyingTo = {
     ...message
   };
 
 
-  const mine =
-    String(
-      message.sender_id
-    ) ===
-    String(
-      currentUser.id
-    );
-
-
   activeReplyTitle.textContent =
-    mine
+    message.sender_id ===
+    currentUser.id
       ? "Reply ke pesan kamu"
       : "Reply ke " +
-        message.sender_name;
+        (
+          currentPartner
+            ? currentPartner.name
+            : "User"
+        );
 
 
   activeReplyText.textContent =
@@ -1646,7 +2360,8 @@ function startReply(message) {
 
 function cancelReply() {
 
-  replyingTo = null;
+  replyingTo =
+    null;
 
 
   activeReply.classList.add(
@@ -1661,465 +2376,82 @@ function cancelReply() {
 
 
 /* =========================================================
-   SEND MESSAGE
+   LAST SEEN
 ========================================================= */
 
-async function sendMessage() {
-
-  if (
-    !currentUser ||
-    !currentPartner
-  ) {
-    return;
-  }
-
-
-  const content =
-    messageInput.value.trim();
-
-
-  if (!content) {
-    return;
-  }
-
-
-  const clientId =
-    "LOCAL_" +
-    Date.now() +
-    "_" +
-    Math.floor(
-      Math.random() * 100000
-    );
-
-
-  const partnerSnapshot = {
-    ...currentPartner
-  };
-
-
-  const replySnapshot =
-    replyingTo
-      ? {
-          ...replyingTo
-        }
-      : null;
-
-
-  const localMessage = {
-
-    id: "",
-
-    client_id:
-      clientId,
-
-    sender_id:
-      currentUser.id,
-
-    sender_name:
-      currentUser.name,
-
-    receiver_id:
-      partnerSnapshot.user_id,
-
-    receiver_name:
-      partnerSnapshot.name,
-
-    type:
-      "text",
-
-    content:
-      content,
-
-    image_url:
-      "",
-
-    reply_to:
-      replySnapshot
-        ? replySnapshot.id
-        : "",
-
-    timestamp:
-      new Date().toISOString(),
-
-    read_at:
-      "",
-
-    pending:
-      true,
-
-    failed:
-      false
-
-  };
-
-
-  /*
-  Bubble langsung muncul.
-  */
-
-  pendingMessages.push(
-    localMessage
-  );
-
-
-  messageInput.value =
-    "";
-
-
-  cancelReply();
-
-
-  renderMessages(
-    true
-  );
-
-
-  messageInput.focus();
-
-
-  try {
-
-    const data =
-      await postAPI({
-
-        action:
-          "sendMessage",
-
-        client_id:
-          clientId,
-
-        sender_id:
-          currentUser.id,
-
-        sender_name:
-          currentUser.name,
-
-        receiver_id:
-          partnerSnapshot.user_id,
-
-        receiver_name:
-          partnerSnapshot.name,
-
-        type:
-          "text",
-
-        content:
-          content,
-
-        image_url:
-          "",
-
-        reply_to:
-          replySnapshot
-            ? replySnapshot.id
-            : ""
-
-      });
-
-
-    if (!data.success) {
-
-      throw new Error(
-        data.message
-      );
-
-    }
-
-
-    if (
-      currentPartner &&
-      String(
-        currentPartner.user_id
-      ) ===
-      String(
-        partnerSnapshot.user_id
-      )
-    ) {
-
-      await loadMessages(
-        true
-      );
-
-    }
-
-
-    loadUsers();
-
-
-  } catch (error) {
-
-    console.error(
-      "Send:",
-      error
-    );
-
-
-    const message =
-      pendingMessages.find(
-        item =>
-          item.client_id ===
-          clientId
-      );
-
-
-    if (message) {
-
-      message.pending =
-        false;
-
-      message.failed =
-        true;
-
-    }
-
-
-    renderMessages(
-      true
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   MARK READ
-========================================================= */
-
-async function markAsRead() {
-
-  if (
-    !currentUser ||
-    !currentPartner
-  ) {
-    return;
-  }
-
-
-  const unreadExists =
-    serverMessages.some(
-      message =>
-
-        String(
-          message.sender_id
-        ) ===
-        String(
-          currentPartner.user_id
-        )
-
-        &&
-
-        String(
-          message.receiver_id
-        ) ===
-        String(
-          currentUser.id
-        )
-
-        &&
-
-        !message.read_at
-    );
-
-
-  if (!unreadExists) {
-    return;
-  }
-
-
-  const partnerId =
-    currentPartner.user_id;
-
-
-  try {
-
-    const data =
-      await postAPI({
-
-        action:
-          "markAsRead",
-
-        user_id:
-          currentUser.id,
-
-        partner_id:
-          partnerId
-
-      });
-
-
-    if (!data.success) {
-      return;
-    }
-
-
-    if (
-      !currentPartner ||
-      String(
-        currentPartner.user_id
-      ) !==
-      String(
-        partnerId
-      )
-    ) {
-      return;
-    }
-
-
-    serverMessages.forEach(
-      message => {
-
-        if (
-
-          String(
-            message.sender_id
-          ) ===
-          String(
-            partnerId
-          )
-
-          &&
-
-          String(
-            message.receiver_id
-          ) ===
-          String(
-            currentUser.id
-          )
-
-          &&
-
-          !message.read_at
-
-        ) {
-
-          message.read_at =
-            data.read_at ||
-            new Date()
-              .toISOString();
-
-        }
-
-      }
-    );
-
-
-    loadUsers();
-
-
-  } catch (error) {
-
-    console.error(
-      "Mark read:",
-      error
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   HEARTBEAT
-========================================================= */
-
-async function sendHeartbeat() {
+async function updateLastSeen() {
 
   if (!currentUser) {
     return;
   }
 
 
-  try {
+  await supabaseClient
+    .from(
+      "profiles"
+    )
+    .update({
 
-    await postAPI({
+      last_seen:
+        new Date()
+          .toISOString()
 
-      action:
-        "heartbeat",
-
-      user_id:
-        currentUser.id
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "Heartbeat:",
-      error
+    })
+    .eq(
+      "id",
+      currentUser.id
     );
 
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+async function logout() {
+
+  const ok =
+    confirm(
+      "Keluar dari akun?"
+    );
+
+
+  if (!ok) {
+    return;
   }
 
-}
+
+  cleanupRealtime();
 
 
-/* =========================================================
-   API
-========================================================= */
-
-async function postAPI(payload) {
-
-  const response =
-    await fetch(
-      API_URL,
-      {
-
-        method:
-          "POST",
-
-        body:
-          JSON.stringify(
-            payload
-          )
-
-      }
-    );
+  clearInterval(
+    heartbeatTimer
+  );
 
 
-  return response.json();
+  await supabaseClient
+    .auth
+    .signOut();
+
+
+  location.reload();
 
 }
 
 
 /* =========================================================
-   AUTH ERRORS
+   MOBILE BACK
 ========================================================= */
 
-function setLoginError(message) {
+function closeMobileChat() {
 
-  loginStatus.className =
-    "small-status error";
-
-
-  loginStatus.textContent =
-    message;
-
-}
+  appScreen.classList.remove(
+    "chat-open"
+  );
 
 
-function setRegisterError(message) {
-
-  registerStatus.className =
-    "small-status error";
-
-
-  registerStatus.textContent =
-    message;
-
-}
-
-
-function cleanError(message) {
-
-  return String(
-    message || "Terjadi kesalahan."
-  )
-    .replace(
-      /^Error:\s*/i,
-      ""
-    );
+  cancelReply();
 
 }
 
@@ -2130,15 +2462,12 @@ function cleanError(message) {
 
 function getInitial(name) {
 
-  if (!name) {
-    return "?";
-  }
-
-
   return name
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+    ? name
+        .trim()
+        .charAt(0)
+        .toUpperCase()
+    : "?";
 
 }
 
@@ -2154,26 +2483,15 @@ function formatTime(value) {
     new Date(value);
 
 
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return "";
-  }
-
-
   return date
     .toLocaleTimeString(
       "id-ID",
       {
-
         hour:
           "2-digit",
 
         minute:
           "2-digit"
-
       }
     );
 
@@ -2193,20 +2511,9 @@ function formatLastSeen(value) {
     new Date(value);
 
 
-  const time =
-    date.getTime();
-
-
-  if (
-    Number.isNaN(time)
-  ) {
-    return "";
-  }
-
-
   const diff =
     Date.now() -
-    time;
+    date.getTime();
 
 
   if (
@@ -2251,7 +2558,6 @@ function formatLastSeen(value) {
     date.toLocaleString(
       "id-ID",
       {
-
         day:
           "2-digit",
 
@@ -2263,7 +2569,6 @@ function formatLastSeen(value) {
 
         minute:
           "2-digit"
-
       }
     )
   );
@@ -2272,74 +2577,33 @@ function formatLastSeen(value) {
 
 
 /* =========================================================
-   BACK MOBILE
+   ERRORS
 ========================================================= */
 
-function closeMobileChat() {
+function setLoginError(
+  message
+) {
 
-  appScreen.classList.remove(
-    "chat-open"
-  );
-
-
-  cancelReply();
+  loginStatus.className =
+    "small-status error";
 
 
-  loadUsers();
+  loginStatus.textContent =
+    message;
 
 }
 
 
-/* =========================================================
-   LOGOUT
-========================================================= */
+function setRegisterError(
+  message
+) {
 
-function logout() {
-
-  const ok =
-    confirm(
-      "Keluar dari akun?"
-    );
+  registerStatus.className =
+    "small-status error";
 
 
-  if (!ok) {
-    return;
-  }
-
-
-  clearInterval(
-    pollTimer
-  );
-
-
-  clearInterval(
-    userTimer
-  );
-
-
-  clearInterval(
-    heartbeatTimer
-  );
-
-
-  /*
-  Hanya session browser yang
-  dihapus.
-
-  AKUN DI DATABASE TIDAK DIHAPUS.
-  */
-
-  localStorage.removeItem(
-    "private_chat_session"
-  );
-
-
-  currentUser = null;
-
-  currentPartner = null;
-
-
-  location.reload();
+  registerStatus.textContent =
+    message;
 
 }
 
@@ -2382,7 +2646,8 @@ loginPassword
     event => {
 
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
 
         loginAccount();
@@ -2399,7 +2664,8 @@ registerPassword2
     event => {
 
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
 
         registerAccount();
@@ -2423,7 +2689,8 @@ messageInput
     event => {
 
       if (
-        event.key === "Enter"
+        event.key ===
+        "Enter"
       ) {
 
         event.preventDefault();
@@ -2433,6 +2700,13 @@ messageInput
       }
 
     }
+  );
+
+
+cancelReplyButton
+  .addEventListener(
+    "click",
+    cancelReply
   );
 
 
@@ -2450,40 +2724,39 @@ logoutButton
   );
 
 
-cancelReplyButton
-  .addEventListener(
-    "click",
-    cancelReply
-  );
-
-
 /* =========================================================
    TAB ACTIVE
 ========================================================= */
 
 document.addEventListener(
   "visibilitychange",
-  () => {
+  async () => {
 
     if (
       document.visibilityState ===
       "visible"
     ) {
 
-      sendHeartbeat();
-
-      loadUsers();
+      await updateLastSeen();
 
 
       if (
         currentPartner
       ) {
 
-        loadMessages(
-          false
-        );
+        /*
+        Safety sync ketika HP kembali
+        dari background/sleep.
+        */
+
+        await loadMessages();
+
+        await markAsRead();
 
       }
+
+
+      await loadUsers();
 
     }
 
