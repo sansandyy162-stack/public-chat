@@ -1,13 +1,11 @@
 /* =========================================================
    PRIVATE CHAT
-   SUPABASE REALTIME V2.1
-   FIX:
-   - Back benar-benar keluar room
-   - Unread realtime
-   - Preview pesan realtime
-   - Chat terbaru naik ke atas
-   - Buka room = unread 0
-   - Read receipt realtime
+   SUPABASE REALTIME V2.2
+   - Realtime Message
+   - Realtime Unread
+   - Read Receipt
+   - Realtime Presence Online / Offline
+   - Last Seen
 ========================================================= */
 
 
@@ -44,7 +42,18 @@ let pendingMessages = [];
 let replyingTo = null;
 
 let realtimeChannel = null;
-let heartbeatTimer = null;
+let presenceChannel = null;
+
+/*
+ * Menyimpan ID user yang sedang online.
+ */
+let onlineUsers = new Set();
+
+/*
+ * Timer untuk refresh tulisan:
+ * "Aktif 1 menit lalu"
+ */
+let lastSeenTimer = null;
 
 
 /* =========================================================
@@ -200,7 +209,6 @@ async function init() {
   } else {
 
     showLogin();
-
   }
 
 
@@ -219,7 +227,7 @@ async function init() {
           cleanupRealtime();
 
           clearInterval(
-            heartbeatTimer
+            lastSeenTimer
           );
 
           currentUser = null;
@@ -227,12 +235,14 @@ async function init() {
           currentPartner = null;
 
           profiles = [];
+
           serverMessages = [];
           pendingMessages = [];
 
+          onlineUsers.clear();
+
           showLogin();
         }
-
       }
     );
 }
@@ -485,6 +495,7 @@ async function loginAccount() {
       data.user;
 
     loginPassword.value = "";
+
     loginStatus.textContent = "";
 
     await startApp();
@@ -545,10 +556,6 @@ async function startApp() {
     currentUser.email || "";
 
 
-  /*
-   * Saat masuk aplikasi kita mulai
-   * dari daftar chat.
-   */
   currentPartner = null;
 
   appScreen.classList.remove(
@@ -564,22 +571,45 @@ async function startApp() {
   );
 
 
+  /*
+   * Update waktu aktif terakhir.
+   */
   await updateLastSeen();
 
+
+  /*
+   * Load daftar user + unread.
+   */
   await loadUsers();
 
+
+  /*
+   * Realtime messages.
+   */
   subscribeRealtime();
 
 
+  /*
+   * Realtime Presence.
+   */
+  subscribePresence();
+
+
+  /*
+   * Kita TIDAK lagi heartbeat database
+   * setiap 20 detik.
+   *
+   * Timer ini hanya refresh tampilan
+   * "Aktif X menit lalu".
+   */
   clearInterval(
-    heartbeatTimer
+    lastSeenTimer
   );
 
-
-  heartbeatTimer =
+  lastSeenTimer =
     setInterval(
-      updateLastSeen,
-      20000
+      refreshStatusDisplay,
+      30000
     );
 }
 
@@ -662,10 +692,6 @@ async function loadUsers() {
   }
 
 
-  /*
-   * Jangan langsung menimpa state
-   * preview/unread yang sudah ada.
-   */
   const oldProfiles =
     new Map(
       profiles.map(
@@ -735,9 +761,6 @@ async function loadUserPreviews() {
     of profiles
   ) {
 
-    /*
-     * Pesan terakhir dengan user ini.
-     */
     const {
       data: lastMessages,
       error: lastError
@@ -766,10 +789,6 @@ async function loadUserPreviews() {
     }
 
 
-    /*
-     * Hitung pesan masuk yang
-     * belum dibaca.
-     */
     const {
       count,
       error: countError
@@ -834,12 +853,6 @@ async function loadUserPreviews() {
   }
 
 
-  sortProfiles();
-
-  /*
-   * sortProfiles memakai global,
-   * jadi isi dulu global-nya.
-   */
   profiles = rendered;
 
   sortProfiles();
@@ -892,6 +905,284 @@ function sortProfiles() {
 
 
 /* =========================================================
+   PRESENCE
+========================================================= */
+
+function subscribePresence() {
+
+  /*
+   * Bersihkan channel Presence lama
+   * kalau ada.
+   */
+  if (presenceChannel) {
+
+    supabaseClient
+      .removeChannel(
+        presenceChannel
+      );
+
+    presenceChannel = null;
+  }
+
+
+  onlineUsers.clear();
+
+
+  /*
+   * Semua user masuk ke room Presence
+   * yang sama.
+   */
+  presenceChannel =
+    supabaseClient.channel(
+      "private-chat-presence",
+      {
+
+        config: {
+
+          presence: {
+
+            /*
+             * Satu user = satu presence key.
+             */
+            key:
+              currentUser.id
+
+          }
+
+        }
+
+      }
+    );
+
+
+  /*
+   * SYNC
+   *
+   * Dipanggil saat daftar user online
+   * berubah.
+   */
+  presenceChannel.on(
+    "presence",
+    {
+      event: "sync"
+    },
+    () => {
+
+      syncOnlineUsers();
+    }
+  );
+
+
+  /*
+   * JOIN
+   *
+   * Ada user masuk / membuka aplikasi.
+   */
+  presenceChannel.on(
+    "presence",
+    {
+      event: "join"
+    },
+    () => {
+
+      syncOnlineUsers();
+    }
+  );
+
+
+  /*
+   * LEAVE
+   *
+   * User close tab / browser /
+   * koneksi Presence terputus.
+   */
+  presenceChannel.on(
+    "presence",
+    {
+      event: "leave"
+    },
+    () => {
+
+      syncOnlineUsers();
+    }
+  );
+
+
+  presenceChannel.subscribe(
+    async status => {
+
+      console.log(
+        "Presence:",
+        status
+      );
+
+
+      if (
+        status === "SUBSCRIBED"
+      ) {
+
+        /*
+         * Beritahu Presence:
+         * "Saya sedang online."
+         */
+        await presenceChannel.track({
+
+          user_id:
+            currentUser.id,
+
+          name:
+            currentProfile
+              ? currentProfile.name
+              : "User",
+
+          online_at:
+            new Date()
+              .toISOString()
+
+        });
+      }
+    }
+  );
+}
+
+
+/* =========================================================
+   SYNC ONLINE USERS
+========================================================= */
+
+function syncOnlineUsers() {
+
+  if (!presenceChannel) {
+    return;
+  }
+
+
+  const state =
+    presenceChannel
+      .presenceState();
+
+
+  const newOnlineUsers =
+    new Set();
+
+
+  /*
+   * Presence state bentuknya:
+   *
+   * {
+   *   "USER_UUID": [...]
+   * }
+   *
+   * Karena presence key kita adalah
+   * currentUser.id, key object tersebut
+   * adalah ID user.
+   */
+  Object.keys(
+    state
+  ).forEach(
+    userId => {
+
+      newOnlineUsers.add(
+        userId
+      );
+    }
+  );
+
+
+  onlineUsers =
+    newOnlineUsers;
+
+
+  /*
+   * Update tampilan sidebar +
+   * header conversation.
+   */
+  refreshStatusDisplay();
+}
+
+
+/* =========================================================
+   IS USER ONLINE
+========================================================= */
+
+function isUserOnline(
+  userId
+) {
+
+  return onlineUsers.has(
+    userId
+  );
+}
+
+
+/* =========================================================
+   REFRESH STATUS DISPLAY
+========================================================= */
+
+function refreshStatusDisplay() {
+
+  /*
+   * Refresh sidebar.
+   */
+  renderUsers();
+
+
+  /*
+   * Refresh status user yang sedang
+   * dibuka.
+   */
+  if (currentPartner) {
+
+    partnerStatus.textContent =
+      getUserStatus(
+        currentPartner
+      );
+  }
+}
+
+
+/* =========================================================
+   USER STATUS
+========================================================= */
+
+function getUserStatus(
+  user
+) {
+
+  if (!user) {
+
+    return "";
+  }
+
+
+  /*
+   * Presence adalah sumber kebenaran
+   * untuk ONLINE.
+   */
+  if (
+    isUserOnline(
+      user.id
+    )
+  ) {
+
+    return "Online";
+  }
+
+
+  /*
+   * Kalau tidak ada di Presence,
+   * berarti OFFLINE.
+   *
+   * Gunakan last_seen hanya untuk
+   * menunjukkan kapan terakhir aktif.
+   */
+  return formatLastSeen(
+    user.last_seen
+  );
+}
+
+
+/* =========================================================
    RENDER USERS
 ========================================================= */
 
@@ -924,6 +1215,7 @@ function renderUsers() {
         );
 
       button.type = "button";
+
       button.className =
         "user-item";
 
@@ -989,9 +1281,6 @@ function renderUsers() {
       );
 
 
-      /*
-       * UNREAD BADGE
-       */
       const unread =
         Number(
           user.unread_count || 0
@@ -1030,7 +1319,29 @@ function renderUsers() {
         );
 
 
+      /*
+       * Kalau ONLINE, kita prioritaskan
+       * tulisan Online.
+       *
+       * Kalau OFFLINE dan ada pesan,
+       * tetap tampil preview pesan.
+       *
+       * Kalau belum ada pesan,
+       * tampil last seen.
+       */
       if (
+        isUserOnline(
+          user.id
+        )
+      ) {
+
+        status.className =
+          "user-status";
+
+        status.textContent =
+          "Online";
+
+      } else if (
         user.last_message
       ) {
 
@@ -1046,8 +1357,8 @@ function renderUsers() {
           "user-status";
 
         status.textContent =
-          formatLastSeen(
-            user.last_seen
+          getUserStatus(
+            user
           );
       }
 
@@ -1086,9 +1397,6 @@ function renderUsers() {
 
 async function openChat(user) {
 
-  /*
-   * Ambil profile terbaru dari state.
-   */
   const freshUser =
     profiles.find(
       item =>
@@ -1116,8 +1424,8 @@ async function openChat(user) {
     );
 
   partnerStatus.textContent =
-    formatLastSeen(
-      currentPartner.last_seen
+    getUserStatus(
+      currentPartner
     );
 
 
@@ -1142,10 +1450,6 @@ async function openChat(user) {
     `;
 
 
-  /*
-   * Langsung hilangkan badge secara
-   * lokal supaya UI responsif.
-   */
   setProfileUnread(
     currentPartner.id,
     0
@@ -1156,11 +1460,6 @@ async function openChat(user) {
 
   await loadMessages();
 
-
-  /*
-   * Setelah history tampil,
-   * tandai pesan masuk sebagai read.
-   */
   await markAsRead();
 
 
@@ -1173,16 +1472,6 @@ async function openChat(user) {
 ========================================================= */
 
 function closeMobileChat() {
-
-  /*
-   * INI FIX UTAMA.
-   *
-   * Sebelumnya currentPartner masih
-   * tersimpan setelah tekan Back.
-   *
-   * Akibatnya pesan baru masih dianggap
-   * masuk ke room yang sedang terbuka.
-   */
 
   currentPartner = null;
 
@@ -1212,9 +1501,6 @@ function closeMobileChat() {
   messagesElement.innerHTML = "";
 
 
-  /*
-   * Hilangkan active user.
-   */
   renderUsers();
 }
 
@@ -1266,10 +1552,6 @@ async function loadMessages() {
   }
 
 
-  /*
-   * User mungkin sudah keluar room
-   * sebelum query selesai.
-   */
   if (
     !currentPartner ||
     currentPartner.id !==
@@ -1293,12 +1575,23 @@ async function loadMessages() {
 
 
 /* =========================================================
-   REALTIME
+   REALTIME MESSAGE
 ========================================================= */
 
 function subscribeRealtime() {
 
-  cleanupRealtime();
+  /*
+   * Hanya cleanup message channel.
+   */
+  if (realtimeChannel) {
+
+    supabaseClient
+      .removeChannel(
+        realtimeChannel
+      );
+
+    realtimeChannel = null;
+  }
 
 
   realtimeChannel =
@@ -1309,9 +1602,6 @@ function subscribeRealtime() {
       )
 
 
-      /*
-       * MESSAGE INSERT
-       */
       .on(
 
         "postgres_changes",
@@ -1332,10 +1622,6 @@ function subscribeRealtime() {
       )
 
 
-      /*
-       * MESSAGE UPDATE
-       * Digunakan untuk read receipt.
-       */
       .on(
 
         "postgres_changes",
@@ -1356,9 +1642,6 @@ function subscribeRealtime() {
       )
 
 
-      /*
-       * PROFILE / LAST SEEN
-       */
       .on(
 
         "postgres_changes",
@@ -1420,9 +1703,6 @@ function handleRealtimeInsert(
   }
 
 
-  /*
-   * Cari ID lawan chat dari pesan.
-   */
   const partnerId =
     message.sender_id ===
       currentUser.id
@@ -1430,19 +1710,11 @@ function handleRealtimeInsert(
       : message.sender_id;
 
 
-  /*
-   * Update preview sidebar LANGSUNG.
-   * Tidak perlu menunggu query ulang.
-   */
   updateSidebarFromMessage(
     message
   );
 
 
-  /*
-   * Apakah room partner ini benar-benar
-   * sedang terbuka?
-   */
   const roomIsOpen =
 
     currentPartner &&
@@ -1480,11 +1752,6 @@ function handleRealtimeInsert(
     );
 
 
-    /*
-     * Pesan MASUK dari partner hanya
-     * dibaca kalau room memang terbuka
-     * dan tab browser terlihat.
-     */
     if (
       message.sender_id ===
         partnerId
@@ -1500,9 +1767,6 @@ function handleRealtimeInsert(
         "visible"
     ) {
 
-      /*
-       * Badge langsung 0.
-       */
       setProfileUnread(
         partnerId,
         0
@@ -1510,21 +1774,11 @@ function handleRealtimeInsert(
 
       renderUsers();
 
-
-      /*
-       * Update database read_at.
-       */
       markAsRead();
     }
 
   } else {
 
-    /*
-     * ROOM TIDAK DIBUKA.
-     *
-     * Jika ini pesan MASUK,
-     * tambah unread secara lokal.
-     */
     if (
       message.receiver_id ===
         currentUser.id &&
@@ -1539,6 +1793,7 @@ function handleRealtimeInsert(
 
 
     sortProfiles();
+
     renderUsers();
   }
 }
@@ -1573,9 +1828,6 @@ function handleRealtimeUpdate(
   }
 
 
-  /*
-   * Update pesan di room aktif.
-   */
   const index =
     serverMessages.findIndex(
       item =>
@@ -1595,21 +1847,11 @@ function handleRealtimeUpdate(
   }
 
 
-  /*
-   * Update preview timestamp/content.
-   */
   updateSidebarFromMessage(
-    message,
-    false
+    message
   );
 
 
-  /*
-   * Kalau pesan masuk sudah read,
-   * badge bisa dihitung ulang dari DB.
-   *
-   * Tapi kalau room aktif, langsung 0.
-   */
   if (
     currentPartner &&
     currentPartner.id ===
@@ -1627,17 +1869,17 @@ function handleRealtimeUpdate(
 
 
   sortProfiles();
+
   renderUsers();
 }
 
 
 /* =========================================================
-   UPDATE SIDEBAR FROM MESSAGE
+   SIDEBAR FROM MESSAGE
 ========================================================= */
 
 function updateSidebarFromMessage(
-  message,
-  updateUnread = false
+  message
 ) {
 
   if (!currentUser) {
@@ -1661,10 +1903,6 @@ function updateSidebarFromMessage(
 
   if (index === -1) {
 
-    /*
-     * User baru mungkin belum ada
-     * di state. Refresh users.
-     */
     loadUsers();
 
     return;
@@ -1686,16 +1924,6 @@ function updateSidebarFromMessage(
   };
 
 
-  if (updateUnread) {
-
-    profiles[index].unread_count =
-      Number(
-        profiles[index]
-          .unread_count || 0
-      ) + 1;
-  }
-
-
   sortProfiles();
 
   renderUsers();
@@ -1703,7 +1931,7 @@ function updateSidebarFromMessage(
 
 
 /* =========================================================
-   UNREAD HELPERS
+   UNREAD
 ========================================================= */
 
 function incrementProfileUnread(
@@ -1774,9 +2002,6 @@ function handleProfileUpdate(
 
   if (index !== -1) {
 
-    /*
-     * Pertahankan preview dan unread.
-     */
     profiles[index] = {
 
       ...profiles[index],
@@ -1813,8 +2038,8 @@ function handleProfileUpdate(
 
 
     partnerStatus.textContent =
-      formatLastSeen(
-        profile.last_seen
+      getUserStatus(
+        currentPartner
       );
   }
 
@@ -1824,7 +2049,7 @@ function handleProfileUpdate(
 
 
 /* =========================================================
-   CLEANUP REALTIME
+   CLEANUP REALTIME + PRESENCE
 ========================================================= */
 
 function cleanupRealtime() {
@@ -1838,6 +2063,30 @@ function cleanupRealtime() {
 
     realtimeChannel = null;
   }
+
+
+  if (presenceChannel) {
+
+    /*
+     * Berhenti track Presence.
+     */
+    presenceChannel
+      .untrack()
+      .catch(
+        () => {}
+      );
+
+
+    supabaseClient
+      .removeChannel(
+        presenceChannel
+      );
+
+    presenceChannel = null;
+  }
+
+
+  onlineUsers.clear();
 }
 
 
@@ -1953,10 +2202,6 @@ async function sendMessage() {
   );
 
 
-  /*
-   * Preview sender juga langsung
-   * berubah tanpa menunggu server.
-   */
   updateSidebarFromMessage(
     optimistic
   );
@@ -2037,10 +2282,6 @@ async function sendMessage() {
 
   if (data) {
 
-    /*
-     * User mungkin sudah menekan Back
-     * sebelum INSERT selesai.
-     */
     if (
       currentPartner &&
       currentPartner.id ===
@@ -2091,9 +2332,6 @@ async function markAsRead() {
   }
 
 
-  /*
-   * Jangan read kalau tab tidak terlihat.
-   */
   if (
     document.visibilityState !==
       "visible"
@@ -2102,9 +2340,6 @@ async function markAsRead() {
   }
 
 
-  /*
-   * Pastikan room benar-benar terbuka.
-   */
   if (
     !appScreen.classList.contains(
       "chat-open"
@@ -2118,9 +2353,6 @@ async function markAsRead() {
     currentPartner.id;
 
 
-  /*
-   * UI lokal langsung 0.
-   */
   setProfileUnread(
     partnerId,
     0
@@ -2161,75 +2393,7 @@ async function markAsRead() {
       "Read:",
       error
     );
-
-    /*
-     * Kalau gagal, refresh count
-     * dari database supaya tidak bohong.
-     */
-    await refreshUnreadForUser(
-      partnerId
-    );
   }
-}
-
-
-/* =========================================================
-   REFRESH SATU UNREAD
-========================================================= */
-
-async function refreshUnreadForUser(
-  profileId
-) {
-
-  if (!currentUser) {
-    return;
-  }
-
-
-  const {
-    count,
-    error
-  } =
-    await supabaseClient
-      .from("messages")
-      .select(
-        "id",
-        {
-          count: "exact",
-          head: true
-        }
-      )
-      .eq(
-        "sender_id",
-        profileId
-      )
-      .eq(
-        "receiver_id",
-        currentUser.id
-      )
-      .is(
-        "read_at",
-        null
-      );
-
-
-  if (error) {
-
-    console.error(
-      "Refresh unread:",
-      error
-    );
-
-    return;
-  }
-
-
-  setProfileUnread(
-    profileId,
-    count || 0
-  );
-
-  renderUsers();
 }
 
 
@@ -2241,13 +2405,7 @@ function renderMessages(
   forceScroll = false
 ) {
 
-  /*
-   * Jangan render conversation
-   * kalau sudah keluar room.
-   */
-  if (
-    !currentPartner
-  ) {
+  if (!currentPartner) {
     return;
   }
 
@@ -2333,9 +2491,8 @@ function renderMessages(
         "message-bubble";
 
 
-      /*
-       * REPLY PREVIEW
-       */
+      /* REPLY PREVIEW */
+
       if (
         message.reply_to
       ) {
@@ -2494,9 +2651,6 @@ function renderMessages(
       );
 
 
-      /*
-       * Klik bubble untuk reply.
-       */
       if (
         message.id &&
         !message.pending &&
@@ -2548,6 +2702,7 @@ function getMessageState(
   ) {
 
     return {
+
       text:
         "⚠ Gagal",
 
@@ -2562,6 +2717,7 @@ function getMessageState(
   ) {
 
     return {
+
       text:
         "○ Pending",
 
@@ -2576,6 +2732,7 @@ function getMessageState(
   ) {
 
     return {
+
       text:
         "✓✓ Terbaca",
 
@@ -2666,6 +2823,17 @@ async function updateLastSeen() {
       .toISOString();
 
 
+  /*
+   * Update local supaya tampilan
+   * langsung punya waktu terbaru.
+   */
+  if (currentProfile) {
+
+    currentProfile.last_seen =
+      now;
+  }
+
+
   const {
     error
   } =
@@ -2710,10 +2878,38 @@ async function logout() {
   }
 
 
+  /*
+   * Simpan waktu terakhir aktif
+   * sebelum logout.
+   */
+  await updateLastSeen();
+
+
+  /*
+   * Keluar dari Presence.
+   */
+  if (presenceChannel) {
+
+    try {
+
+      await presenceChannel
+        .untrack();
+
+    } catch (error) {
+
+      console.log(
+        "Presence untrack:",
+        error
+      );
+    }
+  }
+
+
   cleanupRealtime();
 
+
   clearInterval(
-    heartbeatTimer
+    lastSeenTimer
   );
 
 
@@ -2730,6 +2926,57 @@ async function logout() {
 
   location.reload();
 }
+
+
+/* =========================================================
+   SAVE LAST SEEN WHEN LEAVING PAGE
+========================================================= */
+
+/*
+ * pagehide dipanggil saat user:
+ * - close tab
+ * - pindah halaman
+ * - browser meninggalkan halaman
+ *
+ * Kita coba update last_seen.
+ *
+ * Presence tetap yang menentukan
+ * ONLINE / OFFLINE.
+ */
+window.addEventListener(
+  "pagehide",
+  () => {
+
+    if (!currentUser) {
+      return;
+    }
+
+
+    /*
+     * Tidak perlu await karena halaman
+     * sedang ditutup.
+     */
+    supabaseClient
+      .from("profiles")
+      .update({
+
+        last_seen:
+          new Date()
+            .toISOString()
+
+      })
+      .eq(
+        "id",
+        currentUser.id
+      );
+
+
+    /*
+     * Presence akan otomatis terputus
+     * ketika websocket disconnect.
+     */
+  }
+);
 
 
 /* =========================================================
@@ -2770,10 +3017,6 @@ function getPreviewText(
   }
 
 
-  /*
-   * Biar preview sidebar tidak
-   * terlalu panjang.
-   */
   if (
     content.length > 45
   ) {
@@ -2821,21 +3064,27 @@ function formatTime(value) {
     .toLocaleTimeString(
       "id-ID",
       {
+
         hour:
           "2-digit",
 
         minute:
           "2-digit"
+
       }
     );
 }
 
 
+/* =========================================================
+   FORMAT LAST SEEN
+========================================================= */
+
 function formatLastSeen(value) {
 
   if (!value) {
 
-    return "Belum aktif";
+    return "Offline";
   }
 
 
@@ -2844,30 +3093,42 @@ function formatLastSeen(value) {
 
 
   const diff =
-    Date.now() -
-    date.getTime();
+    Math.max(
+      0,
+      Date.now() -
+        date.getTime()
+    );
+
+
+  const seconds =
+    Math.floor(
+      diff / 1000
+    );
+
+
+  /*
+   * PENTING:
+   *
+   * Tidak ada lagi:
+   * diff < 30 detik = Online
+   *
+   * Online sekarang HANYA ditentukan
+   * oleh Presence.
+   */
 
 
   if (
-    diff < 30000
+    seconds < 60
   ) {
 
-    return "Online";
+    return "Baru saja aktif";
   }
 
 
   const minutes =
     Math.floor(
-      diff / 60000
+      seconds / 60
     );
-
-
-  if (
-    minutes < 1
-  ) {
-
-    return "Baru saja aktif";
-  }
 
 
   if (
@@ -2882,11 +3143,30 @@ function formatLastSeen(value) {
   }
 
 
+  const hours =
+    Math.floor(
+      minutes / 60
+    );
+
+
+  if (
+    hours < 24
+  ) {
+
+    return (
+      "Aktif " +
+      hours +
+      " jam lalu"
+    );
+  }
+
+
   return (
     "Terakhir aktif " +
     date.toLocaleString(
       "id-ID",
       {
+
         day:
           "2-digit",
 
@@ -2898,6 +3178,7 @@ function formatLastSeen(value) {
 
         minute:
           "2-digit"
+
       }
     )
   );
@@ -3047,40 +3328,44 @@ document.addEventListener(
   "visibilitychange",
   async () => {
 
+    /*
+     * Tab kembali aktif.
+     */
     if (
-      document.visibilityState !==
+      document.visibilityState ===
         "visible"
     ) {
 
-      return;
+      /*
+       * Simpan waktu aktif terbaru.
+       */
+      await updateLastSeen();
+
+
+      /*
+       * Safety sync conversation.
+       */
+      if (
+        currentPartner &&
+        appScreen.classList.contains(
+          "chat-open"
+        )
+      ) {
+
+        await loadMessages();
+
+        await markAsRead();
+      }
+
+
+      /*
+       * Refresh sidebar/unread.
+       */
+      await loadUsers();
+
+
+      refreshStatusDisplay();
     }
-
-
-    await updateLastSeen();
-
-
-    /*
-     * Kalau room memang masih terbuka,
-     * safety sync history + read.
-     */
-    if (
-      currentPartner &&
-      appScreen.classList.contains(
-        "chat-open"
-      )
-    ) {
-
-      await loadMessages();
-
-      await markAsRead();
-    }
-
-
-    /*
-     * Sync sidebar/unread setelah HP
-     * kembali dari background.
-     */
-    await loadUsers();
   }
 );
 
