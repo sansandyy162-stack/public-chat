@@ -44,6 +44,26 @@ const supabaseClient =
 const APP_TITLE =
   "Private Chat";
 
+const EMOJI_CHOICES = [
+  "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊",
+  "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙",
+  "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓",
+  "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕",
+  "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭",
+  "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱",
+  "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥",
+  "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮",
+  "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢",
+  "🤮", "🤧", "😷", "🤒", "🤕", "👍", "👎", "👏", "🙌",
+  "👐", "🤝", "🙏", "✌️", "🤞", "🤟", "🤘", "👌", "👋",
+  "💪", "👊", "✊", "❤️", "🧡", "💛", "💚", "💙", "💜",
+  "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗",
+  "💖", "💘", "💝", "💯", "💥", "💫", "💦", "💨", "🔥",
+  "⭐", "✨", "🎉", "🎊", "🎁", "🎈", "✅", "❌", "⚡",
+  "🌹", "🌸", "☀️", "🌈", "🍀", "🍕", "🍔", "🍟", "🍰",
+  "☕", "🍻", "⚽", "🏆", "🎵", "🎮", "📷", "💬", "💡"
+];
+
 const CHAT_IMAGE_BUCKET =
   "chat-wallpapers";
 
@@ -4203,6 +4223,63 @@ async function copyMessage(
    EMOJI
 ========================================================= */
 
+function renderEmojiPanel() {
+
+  emojiPanel.innerHTML =
+    "";
+
+  EMOJI_CHOICES.forEach(
+    emoji => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      button.type =
+        "button";
+
+      button.dataset.emoji =
+        emoji;
+
+      button.setAttribute(
+        "aria-label",
+        emoji
+      );
+
+      button.textContent =
+        emoji;
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          insertEmoji(
+            emoji
+          );
+        }
+      );
+
+      if (
+        window.twemoji
+      ) {
+
+        window.twemoji.parse(
+          button,
+          {
+            folder: "svg",
+            ext: ".svg"
+          }
+        );
+      }
+
+      emojiPanel.appendChild(
+        button
+      );
+    }
+  );
+}
+
 function toggleEmojiPanel() {
 
   emojiPanel
@@ -5724,24 +5801,7 @@ emojiButton
   );
 
 
-emojiPanel
-  .querySelectorAll(
-    "button"
-  )
-  .forEach(
-    button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          insertEmoji(
-            button.textContent
-          );
-        }
-      );
-    }
-  );
+renderEmojiPanel();
 
 
 /* =========================================================

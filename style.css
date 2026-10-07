@@ -863,16 +863,19 @@ button {
   left: 12px;
   bottom: 73px;
 
-  width: min(330px, calc(100% - 24px));
+  width: min(390px, calc(100% - 24px));
+  max-height: min(430px, calc(100dvh - 165px));
 
   padding: 10px;
 
   display: grid;
 
   grid-template-columns:
-    repeat(7, 1fr);
+    repeat(9, 1fr);
 
   gap: 4px;
+
+  overflow-y: auto;
 
   z-index: 30;
 
@@ -898,6 +901,16 @@ button {
   background: transparent;
 
   font-size: 22px;
+  line-height: 1;
+}
+
+.emoji-panel button img {
+  width: 23px;
+  height: 23px;
+
+  display: block;
+
+  margin: auto;
 }
 
 .emoji-panel button:hover {
@@ -1308,7 +1321,7 @@ button {
       );
 
     grid-template-columns:
-      repeat(6, 1fr);
+      repeat(7, 1fr);
   }
 
   .message-menu {
