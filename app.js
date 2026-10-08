@@ -3021,7 +3021,14 @@ async function sendMessage() {
 
   const isImageUpload =
     Boolean(
-      pastedImageFile
+      pastedImageFile ||
+      (
+        selectedUploadFile &&
+        selectedUploadFile.type &&
+        selectedUploadFile.type.startsWith(
+          "image/"
+        )
+      )
     );
 
   let type =
@@ -3239,6 +3246,9 @@ async function sendMessage() {
 
       attachmentButton.title =
         "Upload file";
+
+      messageInput.placeholder =
+        "Ketik pesan...";
     }
 
     if (
@@ -5949,15 +5959,33 @@ fileUploadInput
       selectedUploadFile =
         file;
 
+      const isImage =
+        file.type &&
+        file.type.startsWith(
+          "image/"
+        );
+
       messageInput.value =
-        file.name;
+        isImage
+          ? ""
+          : file.name;
 
       attachmentButton.textContent =
         "✓";
 
       attachmentButton.title =
-        "File siap dikirim: " +
-        file.name;
+        isImage
+          ? "Foto siap dikirim"
+          : "File siap dikirim: " +
+            file.name;
+
+      if (
+        isImage
+      ) {
+
+        messageInput.placeholder =
+          "Tulis caption atau kirim foto...";
+      }
 
       autoResizeMessageInput();
 
