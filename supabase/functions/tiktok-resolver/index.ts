@@ -48,6 +48,7 @@ Deno.serve(async (request) => {
     return Response.json(
       {
         url: finalUrl,
+        videoId,
         embedUrl: `https://www.tiktok.com/embed/v2/${videoId}`,
       },
       { headers: corsHeaders },

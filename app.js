@@ -436,6 +436,11 @@ const linkPreviewFrame =
     "linkPreviewFrame"
   );
 
+const linkPreviewContent =
+  document.getElementById(
+    "linkPreviewContent"
+  );
+
 const closeLinkPreviewButton =
   document.getElementById(
     "closeLinkPreviewButton"
@@ -3473,6 +3478,16 @@ function getLinkPreviewUrl(
 }
 
 
+function getTikTokVideoId(
+  url
+) {
+
+  return url.match(
+    /tiktok\.com\/@[^/]+\/video\/(\d+)/i
+  )?.[1] || null;
+}
+
+
 function isShortTikTokUrl(
   url
 ) {
@@ -3539,7 +3554,96 @@ async function resolveTikTokPreviewUrl(
       );
   }
 
-  return data.embedUrl;
+  return data;
+}
+
+
+function showTikTokEmbed(
+  url,
+  videoId
+) {
+
+  linkPreviewFrame.removeAttribute(
+    "src"
+  );
+
+  linkPreviewFrame
+    .classList
+    .add(
+      "hidden"
+    );
+
+  linkPreviewContent.innerHTML =
+    "";
+
+  linkPreviewContent
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  const embed =
+    document.createElement(
+      "blockquote"
+    );
+
+  embed.className =
+    "tiktok-embed";
+
+  embed.cite =
+    url;
+
+  embed.dataset.videoId =
+    videoId;
+
+  embed.style.maxWidth =
+    "605px";
+
+  embed.style.minWidth =
+    "325px";
+
+  const section =
+    document.createElement(
+      "section"
+    );
+
+  const fallbackLink =
+    document.createElement(
+      "a"
+    );
+
+  fallbackLink.href =
+    url;
+
+  fallbackLink.textContent =
+    "Memuat video TikTok...";
+
+  section.appendChild(
+    fallbackLink
+  );
+
+  embed.appendChild(
+    section
+  );
+
+  linkPreviewContent.appendChild(
+    embed
+  );
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
+  script.async =
+    true;
+
+  script.src =
+    "https://www.tiktok.com/embed.js";
+
+  linkPreviewContent.appendChild(
+    script
+  );
 }
 
 
@@ -3573,6 +3677,40 @@ async function openLinkPreview(
   linkPreviewFrame.dataset.url =
     url;
 
+  linkPreviewFrame
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  linkPreviewContent.innerHTML =
+    "";
+
+  linkPreviewContent
+    .classList
+    .add(
+      "hidden"
+    );
+
+  const directTikTokVideoId =
+    isTikTok
+      ? getTikTokVideoId(
+          url
+        )
+      : null;
+
+  if (
+    directTikTokVideoId
+  ) {
+
+    showTikTokEmbed(
+      url,
+      directTikTokVideoId
+    );
+
+    return;
+  }
+
   if (
     isTikTok &&
     isShortTikTokUrl(
@@ -3589,7 +3727,7 @@ async function openLinkPreview(
 
     try {
 
-      const embedUrl =
+      const resolved =
         await resolveTikTokPreviewUrl(
           url
         );
@@ -3608,8 +3746,10 @@ async function openLinkPreview(
         linkPreviewTitle.textContent =
           "TikTok";
 
-        linkPreviewFrame.src =
-          embedUrl;
+        showTikTokEmbed(
+          resolved.url,
+          resolved.videoId
+        );
       }
 
     } catch (error) {
@@ -3638,6 +3778,9 @@ function closeLinkPreview() {
   linkPreviewFrame.removeAttribute(
     "src"
   );
+
+  linkPreviewContent.innerHTML =
+    "";
 
   delete linkPreviewFrame.dataset.url;
 

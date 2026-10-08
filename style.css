@@ -713,6 +713,23 @@ button {
   background: white;
 }
 
+.link-preview-content {
+  flex: 1;
+
+  padding: 14px;
+
+  overflow: auto;
+
+  background: white;
+}
+
+.link-preview-content .tiktok-embed {
+  min-width: 0 !important;
+  max-width: 605px !important;
+
+  margin: 0 auto !important;
+}
+
 .edit-name-button {
   margin-top: 6px;
   padding: 0;
