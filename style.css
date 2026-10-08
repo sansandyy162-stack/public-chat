@@ -182,7 +182,7 @@ button {
   width: 100%;
   max-width: 1200px;
 
-  height: 100dvh;
+  height: var(--app-height, 100dvh);
 
   margin: auto;
 
@@ -463,6 +463,8 @@ button {
 
   display: flex;
   flex-direction: column;
+
+  min-height: 0;
 }
 
 .chat-header {
@@ -561,6 +563,7 @@ button {
 
 .messages {
   flex: 1;
+  min-height: 0;
 
   overflow-y: auto;
 
@@ -1034,6 +1037,7 @@ button {
     rgba(0, 168, 132, .15);
 }
 
+.attachment-button,
 .emoji-button,
 .send-button {
   width: 44px;
@@ -1046,6 +1050,7 @@ button {
   border-radius: 50%;
 }
 
+.attachment-button,
 .emoji-button {
   background: white;
 
@@ -1060,6 +1065,26 @@ button {
   color: white;
 
   font-size: 19px;
+}
+
+.attachment-button {
+  font-size: 19px;
+}
+
+.message-file {
+  max-width: 300px;
+
+  display: block;
+
+  color: #075e54;
+  font-size: 13px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.message-file:hover {
+  text-decoration: underline;
 }
 
 
@@ -1274,6 +1299,10 @@ button {
 
   .app-screen {
     position: relative;
+    width: 100%;
+    max-width: none;
+
+    overflow: hidden;
   }
 
   .sidebar {
@@ -1291,6 +1320,8 @@ button {
     inset: 0;
 
     z-index: 10;
+
+    overflow: hidden;
   }
 
   .app-screen.chat-open .chat-panel {

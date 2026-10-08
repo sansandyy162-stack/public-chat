@@ -114,6 +114,8 @@ let selectedWallpaperPreviewUrl = null;
 let pastedImageFile = null;
 let pastedImagePreviewUrl = null;
 
+let selectedUploadFile = null;
+
 
 /* =========================================================
    ELEMENTS
@@ -394,6 +396,16 @@ const appFavicon =
     "appFavicon"
   );
 
+const attachmentButton =
+  document.getElementById(
+    "attachmentButton"
+  );
+
+const fileUploadInput =
+  document.getElementById(
+    "fileUploadInput"
+  );
+
 const imagePastePreview =
   document.getElementById(
     "imagePastePreview"
@@ -413,6 +425,39 @@ const cancelImagePasteButton =
 /* =========================================================
    INIT
 ========================================================= */
+
+function syncAppHeight() {
+
+  const height =
+    window.visualViewport
+      ? window.visualViewport.height
+      : window.innerHeight;
+
+  document.documentElement
+    .style
+    .setProperty(
+      "--app-height",
+      height + "px"
+    );
+}
+
+syncAppHeight();
+
+if (
+  window.visualViewport
+) {
+
+  window.visualViewport
+    .addEventListener(
+      "resize",
+      syncAppHeight
+    );
+}
+
+window.addEventListener(
+  "orientationchange",
+  syncAppHeight
+);
 
 async function init() {
 
@@ -2948,7 +2993,8 @@ async function sendMessage() {
 
   if (
     !content &&
-    !pastedImageFile
+    !pastedImageFile &&
+    !selectedUploadFile
   ) {
     return;
   }
@@ -2969,8 +3015,14 @@ async function sendMessage() {
     return;
   }
 
-  const imageFile =
-    pastedImageFile;
+  const attachmentFile =
+    pastedImageFile ||
+    selectedUploadFile;
+
+  const isImageUpload =
+    Boolean(
+      pastedImageFile
+    );
 
   let type =
     "text";
@@ -2979,7 +3031,7 @@ async function sendMessage() {
     null;
 
   if (
-    imageFile
+    attachmentFile
   ) {
 
     sendButton.disabled =
@@ -2989,21 +3041,23 @@ async function sendMessage() {
 
       imageUrl =
         await uploadPastedImage(
-          imageFile
+          attachmentFile
         );
 
       type =
-        "image";
+        isImageUpload
+          ? "image"
+          : "file";
 
     } catch (error) {
 
       console.error(
-        "Image upload:",
+      "Attachment upload:",
         error
       );
 
       alert(
-        "Gambar gagal diunggah. Coba lagi."
+        "File gagal diunggah. Coba lagi."
       );
 
       return;
@@ -3164,10 +3218,27 @@ async function sendMessage() {
   ) {
 
     if (
-      imageFile
+      attachmentFile
     ) {
 
-      clearPastedImage();
+      if (
+        isImageUpload
+      ) {
+
+        clearPastedImage();
+      }
+
+      selectedUploadFile =
+        null;
+
+      fileUploadInput.value =
+        "";
+
+      attachmentButton.textContent =
+        "📎";
+
+      attachmentButton.title =
+        "Upload file";
     }
 
     if (
@@ -3494,6 +3565,39 @@ function renderMessages(
 
         bubble.appendChild(
           image
+        );
+      }
+
+      if (
+        message.type ===
+        "file"
+        &&
+        message.image_url
+      ) {
+
+        const fileLink =
+          document.createElement(
+            "a"
+          );
+
+        fileLink.className =
+          "message-file";
+
+        fileLink.href =
+          message.image_url;
+
+        fileLink.target =
+          "_blank";
+
+        fileLink.rel =
+          "noopener noreferrer";
+
+        fileLink.textContent =
+          "📎 " +
+          (message.content || "Download file");
+
+        bubble.appendChild(
+          fileLink
         );
       }
 
@@ -5090,17 +5194,12 @@ function getFileExtension(
       .pop()
       .toLowerCase();
 
-  const safe = [
-
-    "jpg",
-    "jpeg",
-    "png",
-    "webp",
-    "gif"
-  ];
-
   if (
-    safe.includes(
+    name.includes(
+      "."
+    )
+    &&
+    /^[a-z0-9]{1,10}$/.test(
       extension
     )
   ) {
@@ -5132,7 +5231,7 @@ function getFileExtension(
     return "gif";
   }
 
-  return "jpg";
+  return "bin";
 }
 
 
@@ -5298,6 +5397,15 @@ function getPreviewText(
   ) {
 
     return "📷 Foto";
+  }
+
+  if (
+    message.type ===
+    "file"
+  ) {
+
+    return "📎 " +
+      (message.content || "File");
   }
 
   const content =
@@ -5782,6 +5890,79 @@ editNameButton
   .addEventListener(
     "click",
     editDisplayName
+  );
+
+
+attachmentButton
+  .addEventListener(
+    "click",
+    () => {
+
+      fileUploadInput.click();
+    }
+  );
+
+
+fileUploadInput
+  .addEventListener(
+    "change",
+    () => {
+
+      const file =
+        fileUploadInput.files[0];
+
+      if (
+        !file
+      ) {
+        return;
+      }
+
+      if (
+        editingMessage
+      ) {
+
+        alert(
+          "Selesaikan edit pesan terlebih dahulu."
+        );
+
+        fileUploadInput.value =
+          "";
+
+        return;
+      }
+
+      if (
+        file.size >
+        10 * 1024 * 1024
+      ) {
+
+        alert(
+          "Ukuran file maksimal 10 MB."
+        );
+
+        fileUploadInput.value =
+          "";
+
+        return;
+      }
+
+      selectedUploadFile =
+        file;
+
+      messageInput.value =
+        file.name;
+
+      attachmentButton.textContent =
+        "✓";
+
+      attachmentButton.title =
+        "File siap dikirim: " +
+        file.name;
+
+      autoResizeMessageInput();
+
+      messageInput.focus();
+    }
   );
 
 
