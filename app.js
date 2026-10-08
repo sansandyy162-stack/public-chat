@@ -421,6 +421,26 @@ const cancelImagePasteButton =
     "cancelImagePasteButton"
   );
 
+const linkPreviewModal =
+  document.getElementById(
+    "linkPreviewModal"
+  );
+
+const linkPreviewTitle =
+  document.getElementById(
+    "linkPreviewTitle"
+  );
+
+const linkPreviewFrame =
+  document.getElementById(
+    "linkPreviewFrame"
+  );
+
+const closeLinkPreviewButton =
+  document.getElementById(
+    "closeLinkPreviewButton"
+  );
+
 
 /* =========================================================
    INIT
@@ -3383,6 +3403,158 @@ async function markAsRead() {
    RENDER MESSAGES
 ========================================================= */
 
+function getLinkPreviewUrl(
+  url
+) {
+
+  const tiktokVideo =
+    url.match(
+      /tiktok\.com\/@[^/]+\/video\/(\d+)/i
+    );
+
+  if (
+    tiktokVideo
+  ) {
+
+    return (
+      "https://www.tiktok.com/embed/v2/" +
+      tiktokVideo[1]
+    );
+  }
+
+  return url;
+}
+
+
+function openLinkPreview(
+  url
+) {
+
+  const isTikTok =
+    /tiktok\.com/i.test(
+      url
+    );
+
+  const isThreads =
+    /threads\.net|threads\.com/i.test(
+      url
+    );
+
+  linkPreviewTitle.textContent =
+    isTikTok
+      ? "TikTok"
+      : isThreads
+        ? "Threads"
+        : "Pratinjau tautan";
+
+  linkPreviewFrame.src =
+    getLinkPreviewUrl(
+      url
+    );
+
+  linkPreviewModal
+    .classList
+    .remove(
+      "hidden"
+    );
+}
+
+
+function closeLinkPreview() {
+
+  linkPreviewFrame.removeAttribute(
+    "src"
+  );
+
+  linkPreviewModal
+    .classList
+    .add(
+      "hidden"
+    );
+}
+
+
+function appendMessageText(
+  container,
+  content
+) {
+
+  const value =
+    String(
+      content ||
+      ""
+    );
+
+  const urlPattern =
+    /https?:\/\/[^\s<]+/gi;
+
+  let index =
+    0;
+
+  value.replace(
+    urlPattern,
+    (
+      matched,
+      offset
+    ) => {
+
+      container.append(
+        document.createTextNode(
+          value.slice(
+            index,
+            offset
+          )
+        )
+      );
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      link.className =
+        "message-link";
+
+      link.href =
+        matched;
+
+      link.textContent =
+        matched;
+
+      link.addEventListener(
+        "click",
+        event => {
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          openLinkPreview(
+            matched
+          );
+        }
+      );
+
+      container.appendChild(
+        link
+      );
+
+      index =
+        offset +
+        matched.length;
+
+      return matched;
+    }
+  );
+
+  container.append(
+    document.createTextNode(
+      value.slice(
+        index
+      )
+    )
+  );
+}
+
 function renderMessages(
   forceScroll = false
 ) {
@@ -3669,8 +3841,10 @@ function renderMessages(
         message.content
       ) {
 
-        text.textContent =
-          message.content;
+        appendMessageText(
+          text,
+          message.content
+        );
 
         bubble.appendChild(
           text
@@ -5927,6 +6101,29 @@ cancelImagePasteButton
       clearPastedImage();
 
       messageInput.focus();
+    }
+  );
+
+
+closeLinkPreviewButton
+  .addEventListener(
+    "click",
+    closeLinkPreview
+  );
+
+
+linkPreviewModal
+  .addEventListener(
+    "click",
+    event => {
+
+      if (
+        event.target ===
+        linkPreviewModal
+      ) {
+
+        closeLinkPreview();
+      }
     }
   );
 

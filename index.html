@@ -489,6 +489,41 @@
   </section>
 
 
+  <!-- LINK PREVIEW -->
+
+  <div
+    id="linkPreviewModal"
+    class="link-preview-modal hidden"
+  >
+
+    <div class="link-preview-dialog">
+
+      <div class="link-preview-header">
+        <strong id="linkPreviewTitle">Buka tautan</strong>
+
+        <button
+          id="closeLinkPreviewButton"
+          class="modal-close"
+          type="button"
+          aria-label="Tutup tautan"
+        >
+          ×
+        </button>
+      </div>
+
+      <iframe
+        id="linkPreviewFrame"
+        class="link-preview-frame"
+        title="Pratinjau tautan"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        allow="autoplay; fullscreen; clipboard-read; clipboard-write"
+      ></iframe>
+
+    </div>
+
+  </div>
+
+
   <!-- MESSAGE MENU -->
 
   <div
