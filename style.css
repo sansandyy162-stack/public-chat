@@ -682,6 +682,18 @@ button {
   object-fit: contain;
 }
 
+.message-video {
+  width: 100%;
+  max-width: 360px;
+  max-height: 420px;
+
+  display: block;
+
+  border-radius: 7px;
+
+  background: #111;
+}
+
 .message-image + .message-text:not(:empty) {
   margin-top: 7px;
 }

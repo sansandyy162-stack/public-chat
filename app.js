@@ -3019,7 +3019,7 @@ async function sendMessage() {
     pastedImageFile ||
     selectedUploadFile;
 
-  const isImageUpload =
+const isImageUpload =
     Boolean(
       pastedImageFile ||
       (
@@ -3028,6 +3028,15 @@ async function sendMessage() {
         selectedUploadFile.type.startsWith(
           "image/"
         )
+      )
+    );
+
+  const isVideoUpload =
+    Boolean(
+      selectedUploadFile &&
+      selectedUploadFile.type &&
+      selectedUploadFile.type.startsWith(
+        "video/"
       )
     );
 
@@ -3054,7 +3063,9 @@ async function sendMessage() {
       type =
         isImageUpload
           ? "image"
-          : "file";
+          : isVideoUpload
+            ? "video"
+            : "file";
 
     } catch (error) {
 
@@ -3229,7 +3240,8 @@ async function sendMessage() {
     ) {
 
       if (
-        isImageUpload
+        isImageUpload ||
+        isVideoUpload
       ) {
 
         clearPastedImage();
@@ -3575,6 +3587,35 @@ function renderMessages(
 
         bubble.appendChild(
           image
+        );
+      }
+
+      if (
+        message.type ===
+        "video"
+        &&
+        message.image_url
+      ) {
+
+        const video =
+          document.createElement(
+            "video"
+          );
+
+        video.className =
+          "message-video";
+
+        video.src =
+          message.image_url;
+
+        video.controls =
+          true;
+
+        video.preload =
+          "metadata";
+
+        bubble.appendChild(
+          video
         );
       }
 
@@ -5418,6 +5459,14 @@ function getPreviewText(
       (message.content || "File");
   }
 
+  if (
+    message.type ===
+    "video"
+  ) {
+
+    return "🎬 Video";
+  }
+
   const content =
     String(
       message.content ||
@@ -5943,11 +5992,11 @@ fileUploadInput
 
       if (
         file.size >
-        10 * 1024 * 1024
+        25 * 1024 * 1024
       ) {
 
         alert(
-          "Ukuran file maksimal 10 MB."
+          "Ukuran file maksimal 25 MB."
         );
 
         fileUploadInput.value =
@@ -5965,8 +6014,14 @@ fileUploadInput
           "image/"
         );
 
+      const isVideo =
+        file.type &&
+        file.type.startsWith(
+          "video/"
+        );
+
       messageInput.value =
-        isImage
+        isImage || isVideo
           ? ""
           : file.name;
 
@@ -5974,17 +6029,21 @@ fileUploadInput
         "✓";
 
       attachmentButton.title =
-        isImage
-          ? "Foto siap dikirim"
+        isImage || isVideo
+          ? isVideo
+            ? "Video siap dikirim"
+            : "Foto siap dikirim"
           : "File siap dikirim: " +
             file.name;
 
       if (
-        isImage
+        isImage || isVideo
       ) {
 
         messageInput.placeholder =
-          "Tulis caption atau kirim foto...";
+          isVideo
+            ? "Tulis caption atau kirim video..."
+            : "Tulis caption atau kirim foto...";
       }
 
       autoResizeMessageInput();
