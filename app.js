@@ -3052,12 +3052,8 @@ const isImageUpload =
     );
 
   const isVideoUpload =
-    Boolean(
-      selectedUploadFile &&
-      selectedUploadFile.type &&
-      selectedUploadFile.type.startsWith(
-        "video/"
-      )
+    isVideoFile(
+      selectedUploadFile
     );
 
   let type =
@@ -3402,6 +3398,57 @@ async function markAsRead() {
 /* =========================================================
    RENDER MESSAGES
 ========================================================= */
+
+function isVideoFile(
+  file
+) {
+
+  return Boolean(
+    file &&
+    (
+      (
+        file.type &&
+        file.type.startsWith(
+          "video/"
+        )
+      )
+      ||
+      /\.(mp4|m4v|mov|webm|3gp|avi)$/i.test(
+        String(
+          file.name ||
+          ""
+        )
+      )
+    )
+  );
+}
+
+
+function isVideoMessage(
+  message
+) {
+
+  return Boolean(
+    message &&
+    (
+      message.type ===
+      "video"
+      ||
+      (
+        message.type ===
+        "file"
+        &&
+        /\.(mp4|m4v|mov|webm|3gp|avi)$/i.test(
+          String(
+            message.content ||
+            ""
+          )
+        )
+      )
+    )
+  );
+}
+
 
 function getLinkPreviewUrl(
   url
@@ -3763,8 +3810,9 @@ function renderMessages(
       }
 
       if (
-        message.type ===
-        "video"
+        isVideoMessage(
+          message
+        )
         &&
         message.image_url
       ) {
@@ -3794,6 +3842,10 @@ function renderMessages(
       if (
         message.type ===
         "file"
+        &&
+        !isVideoMessage(
+          message
+        )
         &&
         message.image_url
       ) {
@@ -5625,20 +5677,21 @@ function getPreviewText(
   }
 
   if (
+    isVideoMessage(
+      message
+    )
+  ) {
+
+    return "🎬 Video";
+  }
+
+  if (
     message.type ===
     "file"
   ) {
 
     return "📎 " +
       (message.content || "File");
-  }
-
-  if (
-    message.type ===
-    "video"
-  ) {
-
-    return "🎬 Video";
   }
 
   const content =
@@ -6212,9 +6265,8 @@ fileUploadInput
         );
 
       const isVideo =
-        file.type &&
-        file.type.startsWith(
-          "video/"
+        isVideoFile(
+          file
         );
 
       messageInput.value =
