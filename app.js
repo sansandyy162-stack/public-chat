@@ -3661,10 +3661,25 @@ async function openLinkPreview(
       url
     );
 
-  linkPreviewTitle.textContent =
+  /*
+   * TikTok membatasi pemutaran dari embed pada
+   * browser tertentu. Buka di tab yang sama agar
+   * pemutaran memakai halaman TikTok asli, tanpa
+   * membuat tab baru. Tombol Back kembali ke chat.
+   */
+  if (
     isTikTok
-      ? "TikTok"
-      : isThreads
+  ) {
+
+    window.location.assign(
+      url
+    );
+
+    return;
+  }
+
+  linkPreviewTitle.textContent =
+    isThreads
         ? "Threads"
         : "Pratinjau tautan";
 
