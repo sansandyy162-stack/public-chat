@@ -3473,7 +3473,77 @@ function getLinkPreviewUrl(
 }
 
 
-function openLinkPreview(
+function isShortTikTokUrl(
+  url
+) {
+
+  try {
+
+    const parsed =
+      new URL(
+        url
+      );
+
+    const host =
+      parsed.hostname
+        .toLowerCase();
+
+    return (
+      host === "vt.tiktok.com"
+      ||
+      host === "vm.tiktok.com"
+      ||
+      (
+        host === "www.tiktok.com"
+        &&
+        parsed.pathname.startsWith(
+          "/t/"
+        )
+      )
+    );
+
+  } catch (error) {
+
+    return false;
+  }
+}
+
+
+async function resolveTikTokPreviewUrl(
+  url
+) {
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .functions
+      .invoke(
+        "tiktok-resolver",
+        {
+          body: {
+            url
+          }
+        }
+      );
+
+  if (
+    error ||
+    !data ||
+    !data.embedUrl
+  ) {
+    throw error ||
+      new Error(
+        "Embed TikTok tidak tersedia."
+      );
+  }
+
+  return data.embedUrl;
+}
+
+
+async function openLinkPreview(
   url
 ) {
 
@@ -3494,15 +3564,71 @@ function openLinkPreview(
         ? "Threads"
         : "Pratinjau tautan";
 
-  linkPreviewFrame.src =
-    getLinkPreviewUrl(
-      url
-    );
-
   linkPreviewModal
     .classList
     .remove(
       "hidden"
+    );
+
+  linkPreviewFrame.dataset.url =
+    url;
+
+  if (
+    isTikTok &&
+    isShortTikTokUrl(
+      url
+    )
+  ) {
+
+    linkPreviewTitle.textContent =
+      "Memuat TikTok...";
+
+    linkPreviewFrame.removeAttribute(
+      "src"
+    );
+
+    try {
+
+      const embedUrl =
+        await resolveTikTokPreviewUrl(
+          url
+        );
+
+      if (
+        !linkPreviewModal
+          .classList
+          .contains(
+            "hidden"
+          )
+        &&
+        linkPreviewFrame.dataset.url ===
+        url
+      ) {
+
+        linkPreviewTitle.textContent =
+          "TikTok";
+
+        linkPreviewFrame.src =
+          embedUrl;
+      }
+
+    } catch (error) {
+
+      console.error(
+        "TikTok resolver:",
+        error
+      );
+
+      linkPreviewTitle.textContent =
+        "TikTok tidak dapat dimuat";
+    }
+
+    return;
+  }
+
+  linkPreviewFrame.src =
+    getLinkPreviewUrl(
+      url
     );
 }
 
@@ -3512,6 +3638,8 @@ function closeLinkPreview() {
   linkPreviewFrame.removeAttribute(
     "src"
   );
+
+  delete linkPreviewFrame.dataset.url;
 
   linkPreviewModal
     .classList
