@@ -1134,6 +1134,13 @@ button {
   line-height: 1.4;
 }
 
+.sticker-import-status {
+  margin: 0 0 9px;
+  color: #007b5e;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 
 /* =========================================================
    COMPOSER

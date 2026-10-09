@@ -138,6 +138,7 @@ let pastedImagePreviewUrl = null;
 let selectedUploadFile = null;
 let selectedSticker = null;
 let stickerPanelView = "all";
+let stickerImportStatus = "";
 
 
 /* =========================================================
@@ -432,6 +433,11 @@ const stickerPanel =
 const stickerUploadInput =
   document.getElementById(
     "stickerUploadInput"
+  );
+
+const stickerPackInput =
+  document.getElementById(
+    "stickerPackInput"
   );
 
 const attachmentButton =
@@ -2975,7 +2981,8 @@ function showPastedImage(
 
 
 async function uploadPastedImage(
-  file
+  file,
+  category = "message"
 ) {
 
   if (
@@ -2994,7 +3001,7 @@ async function uploadPastedImage(
   const path =
     currentRoomId +
     "/" +
-    "message-" +
+    category + "-" +
     crypto.randomUUID() +
     "." +
     extension;
@@ -5161,6 +5168,33 @@ function renderStickerPanel() {
     }
   );
 
+  const importButton =
+    document.createElement(
+      "button"
+    );
+
+  importButton.type =
+    "button";
+
+  importButton.className =
+    "add-sticker-button";
+
+  importButton.innerHTML =
+    "<strong>⇩</strong><span>Import ZIP</span>";
+
+  importButton.setAttribute(
+    "aria-label",
+    "Import paket stiker WhatsApp"
+  );
+
+  importButton.addEventListener(
+    "click",
+    () => {
+
+      stickerPackInput.click();
+    }
+  );
+
   const builtInStickers =
     STICKER_CHOICES.map(
       ([label, background, color]) => ({
@@ -5196,6 +5230,10 @@ function renderStickerPanel() {
 
     grid.appendChild(
       addButton
+    );
+
+    grid.appendChild(
+      importButton
     );
   }
 
@@ -5333,6 +5371,26 @@ function renderStickerPanel() {
     tabs
   );
 
+  if (
+    stickerImportStatus
+  ) {
+
+    const status =
+      document.createElement(
+        "p"
+      );
+
+    status.className =
+      "sticker-import-status";
+
+    status.textContent =
+      stickerImportStatus;
+
+    stickerPanel.appendChild(
+      status
+    );
+  }
+
   stickerPanel.appendChild(
     grid
   );
@@ -5413,10 +5471,238 @@ function saveCustomSticker(
         ...stickers
       ].slice(
         0,
-        24
+        1200
       )
     )
   );
+}
+
+
+function saveCustomStickers(
+  stickers
+) {
+
+  const existing =
+    getCustomStickers();
+
+  localStorage.setItem(
+    CUSTOM_STICKERS_KEY,
+    JSON.stringify(
+      [
+        ...stickers,
+        ...existing
+      ].slice(
+        0,
+        1200
+      )
+    )
+  );
+}
+
+
+async function importStickerPack(
+  zipFile
+) {
+
+  if (
+    !currentRoomId
+  ) {
+
+    throw new Error(
+      "Buka percakapan terlebih dahulu sebelum import stiker."
+    );
+  }
+
+  if (
+    !window.JSZip
+  ) {
+
+    throw new Error(
+      "Library import stiker belum termuat. Coba refresh halaman."
+    );
+  }
+
+  const archive =
+    await window.JSZip.loadAsync(
+      zipFile
+    );
+
+  const entries =
+    Object.values(
+      archive.files
+    ).filter(
+      entry =>
+        !entry.dir &&
+        /\.(webp|png|jpe?g|gif)$/i.test(
+          entry.name
+        )
+    );
+
+  if (
+    !entries.length
+  ) {
+
+    throw new Error(
+      "ZIP ini tidak berisi file stiker gambar."
+    );
+  }
+
+  if (
+    !window.confirm(
+      "Ada " +
+      entries.length +
+      " stiker. Import semua akan mengunggahnya ke storage dan bisa memakan waktu. Lanjutkan?"
+    )
+  ) {
+
+    return;
+  }
+
+  let nextIndex =
+    0;
+
+  let completed =
+    0;
+
+  let failed =
+    0;
+
+  const imported =
+    [];
+
+  const updateStatus =
+    () => {
+
+      stickerImportStatus =
+        "Mengimpor stiker " +
+        completed +
+        "/" +
+        entries.length +
+        (failed
+          ? " (" + failed + " gagal)"
+          : ""
+        );
+
+      renderStickerPanel();
+    };
+
+  updateStatus();
+
+  const worker =
+    async () => {
+
+      while (
+        nextIndex <
+        entries.length
+      ) {
+
+        const entry =
+          entries[
+            nextIndex
+          ];
+
+        nextIndex +=
+          1;
+
+        try {
+
+          const blob =
+            await entry.async(
+              "blob"
+            );
+
+          if (
+            blob.size >
+            1024 * 1024
+          ) {
+
+            throw new Error(
+              "Ukuran stiker terlalu besar."
+            );
+          }
+
+          const extension =
+            getFileExtension(
+              {
+                name: entry.name
+              }
+            );
+
+          const file =
+            new File(
+              [blob],
+              entry.name,
+              {
+                type:
+                  blob.type ||
+                  "image/" + extension
+              }
+            );
+
+          const url =
+            await uploadPastedImage(
+              file,
+              "sticker"
+            );
+
+          imported.push(
+            {
+              id:
+                "custom-" +
+                crypto.randomUUID(),
+              label:
+                entry.name,
+              url
+            }
+          );
+        } catch (
+          error
+        ) {
+
+          console.error(
+            "Sticker import:",
+            error
+          );
+
+          failed +=
+            1;
+        }
+
+        completed +=
+          1;
+
+        if (
+          completed % 8 === 0 ||
+          completed === entries.length
+        ) {
+
+          updateStatus();
+        }
+      }
+    };
+
+  await Promise.all(
+    [
+      worker(),
+      worker(),
+      worker(),
+      worker()
+    ]
+  );
+
+  saveCustomStickers(
+    imported
+  );
+
+  stickerImportStatus =
+    imported.length +
+    " stiker berhasil diimport" +
+    (failed
+      ? ", " + failed + " gagal."
+      : "."
+    );
+
+  renderStickerPanel();
 }
 
 
@@ -7169,6 +7455,46 @@ stickerUploadInput
       reader.readAsDataURL(
         file
       );
+    }
+  );
+
+stickerPackInput
+  .addEventListener(
+    "change",
+    async () => {
+
+      const zipFile =
+        stickerPackInput.files[0];
+
+      if (
+        !zipFile
+      ) {
+        return;
+      }
+
+      try {
+
+        await importStickerPack(
+          zipFile
+        );
+      } catch (
+        error
+      ) {
+
+        console.error(
+          "Sticker pack import:",
+          error
+        );
+
+        alert(
+          error.message ||
+          "Paket stiker gagal diimport."
+        );
+      } finally {
+
+        stickerPackInput.value =
+          "";
+      }
     }
   );
 
