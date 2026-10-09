@@ -82,6 +82,9 @@ const STICKER_CHOICES = [
   ["BYE!", "#e2e8f0", "#475569"]
 ];
 
+const STICKER_FAVORITES_KEY =
+  "private-chat-favorite-stickers";
+
 const DEFAULT_FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
 
@@ -131,6 +134,7 @@ let pastedImagePreviewUrl = null;
 
 let selectedUploadFile = null;
 let selectedSticker = null;
+let stickerPanelView = "all";
 
 
 /* =========================================================
@@ -5064,7 +5068,95 @@ function renderStickerPanel() {
   stickerPanel.innerHTML =
     "";
 
-  STICKER_CHOICES.forEach(
+  const favoriteLabels =
+    getFavoriteStickerLabels();
+
+  const tabs =
+    document.createElement(
+      "div"
+    );
+
+  tabs.className =
+    "sticker-tabs";
+
+  [
+    ["all", "Semua"],
+    ["favorites", "★ Favorit"]
+  ].forEach(
+    ([view, label]) => {
+
+      const tab =
+        document.createElement(
+          "button"
+        );
+
+      tab.type =
+        "button";
+
+      tab.className =
+        stickerPanelView === view
+          ? "active"
+          : "";
+
+      tab.textContent =
+        label;
+
+      tab.addEventListener(
+        "click",
+        () => {
+
+          stickerPanelView =
+            view;
+
+          renderStickerPanel();
+        }
+      );
+
+      tabs.appendChild(
+        tab
+      );
+    }
+  );
+
+  const grid =
+    document.createElement(
+      "div"
+    );
+
+  grid.className =
+    "sticker-grid";
+
+  const stickers =
+    stickerPanelView === "favorites"
+      ? STICKER_CHOICES.filter(
+        ([label]) =>
+          favoriteLabels.includes(
+            label
+          )
+      )
+      : STICKER_CHOICES;
+
+  if (
+    !stickers.length
+  ) {
+
+    const empty =
+      document.createElement(
+        "p"
+      );
+
+    empty.className =
+      "sticker-empty";
+
+    empty.textContent =
+      "Belum ada stiker favorit. Tekan ★ pada stiker untuk menyimpannya.";
+
+    grid.appendChild(
+      empty
+    );
+  }
+
+  stickers.forEach(
     ([label, background, color]) => {
 
       const stickerUrl =
@@ -5074,9 +5166,9 @@ function renderStickerPanel() {
           color
         );
 
-      const button =
+      const sticker =
         document.createElement(
-          "button"
+          "div"
         );
 
       const image =
@@ -5084,13 +5176,47 @@ function renderStickerPanel() {
           "img"
         );
 
-      button.type =
+      const sendButton =
+        document.createElement(
+          "button"
+        );
+
+      const favoriteButton =
+        document.createElement(
+          "button"
+        );
+
+      sticker.className =
+        "sticker-item";
+
+      sendButton.type =
         "button";
 
-      button.setAttribute(
+      sendButton.setAttribute(
         "aria-label",
         "Kirim stiker " + label
       );
+
+      favoriteButton.type =
+        "button";
+
+      favoriteButton.className =
+        "favorite-sticker-button" +
+        (
+          favoriteLabels.includes(
+            label
+          )
+            ? " active"
+            : ""
+        );
+
+      favoriteButton.setAttribute(
+        "aria-label",
+        "Tambah atau hapus " + label + " dari favorit"
+      );
+
+      favoriteButton.textContent =
+        "★";
 
       image.src =
         stickerUrl;
@@ -5098,11 +5224,11 @@ function renderStickerPanel() {
       image.alt =
         label;
 
-      button.appendChild(
+      sendButton.appendChild(
         image
       );
 
-      button.addEventListener(
+      sendButton.addEventListener(
         "click",
         () => {
 
@@ -5117,10 +5243,90 @@ function renderStickerPanel() {
         }
       );
 
-      stickerPanel.appendChild(
-        button
+      favoriteButton.addEventListener(
+        "click",
+        () => {
+
+          toggleFavoriteSticker(
+            label
+          );
+
+          renderStickerPanel();
+        }
+      );
+
+      sticker.appendChild(
+        sendButton
+      );
+
+      sticker.appendChild(
+        favoriteButton
+      );
+
+      grid.appendChild(
+        sticker
       );
     }
+  );
+
+  stickerPanel.appendChild(
+    tabs
+  );
+
+  stickerPanel.appendChild(
+    grid
+  );
+}
+
+
+function getFavoriteStickerLabels() {
+
+  try {
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          STICKER_FAVORITES_KEY
+        ) || "[]"
+      );
+
+    return Array.isArray(
+      saved
+    )
+      ? saved
+      : [];
+  } catch {
+
+    return [];
+  }
+}
+
+
+function toggleFavoriteSticker(
+  label
+) {
+
+  const favorites =
+    getFavoriteStickerLabels();
+
+  const updated =
+    favorites.includes(
+      label
+    )
+      ? favorites.filter(
+        favorite =>
+          favorite !== label
+      )
+      : [
+        ...favorites,
+        label
+      ];
+
+  localStorage.setItem(
+    STICKER_FAVORITES_KEY,
+    JSON.stringify(
+      updated
+    )
   );
 }
 
