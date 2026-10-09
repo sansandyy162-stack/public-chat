@@ -67,6 +67,21 @@ const EMOJI_CHOICES = [
 const CHAT_IMAGE_BUCKET =
   "chat-wallpapers";
 
+const STICKER_CHOICES = [
+  ["HAI!", "#fff1a8", "#8a5a00"],
+  ["WKWK", "#d7f7e8", "#087f5b"],
+  ["MANTAP", "#dbeafe", "#1d4ed8"],
+  ["LOVE", "#ffe0ec", "#be185d"],
+  ["MAAF", "#ede9fe", "#6d28d9"],
+  ["OK!", "#dcfce7", "#15803d"],
+  ["GAS!", "#ffedd5", "#c2410c"],
+  ["SABAR", "#e0f2fe", "#0369a1"],
+  ["SIAP", "#fef3c7", "#b45309"],
+  ["HEBAT", "#fce7f3", "#be123c"],
+  ["THANKS", "#ccfbf1", "#0f766e"],
+  ["BYE!", "#e2e8f0", "#475569"]
+];
+
 const DEFAULT_FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
 
@@ -115,6 +130,7 @@ let pastedImageFile = null;
 let pastedImagePreviewUrl = null;
 
 let selectedUploadFile = null;
+let selectedSticker = null;
 
 
 /* =========================================================
@@ -394,6 +410,16 @@ const wallpaperStatus =
 const appFavicon =
   document.getElementById(
     "appFavicon"
+  );
+
+const stickerButton =
+  document.getElementById(
+    "stickerButton"
+  );
+
+const stickerPanel =
+  document.getElementById(
+    "stickerPanel"
   );
 
 const attachmentButton =
@@ -3019,7 +3045,8 @@ async function sendMessage() {
   if (
     !content &&
     !pastedImageFile &&
-    !selectedUploadFile
+    !selectedUploadFile &&
+    !selectedSticker
   ) {
     return;
   }
@@ -3066,6 +3093,17 @@ const isImageUpload =
 
   let imageUrl =
     null;
+
+  if (
+    selectedSticker
+  ) {
+
+    type =
+      "sticker";
+
+    imageUrl =
+      selectedSticker.url;
+  }
 
   if (
     attachmentFile
@@ -3269,6 +3307,9 @@ const isImageUpload =
       }
 
       selectedUploadFile =
+        null;
+
+      selectedSticker =
         null;
 
       fileUploadInput.value =
@@ -4092,6 +4133,33 @@ function renderMessages(
 
         bubble.appendChild(
           image
+        );
+      }
+
+      if (
+        message.type ===
+        "sticker"
+        &&
+        message.image_url
+      ) {
+
+        const sticker =
+          document.createElement(
+            "img"
+          );
+
+        sticker.className =
+          "message-sticker";
+
+        sticker.src =
+          message.image_url;
+
+        sticker.alt =
+          message.content ||
+          "Stiker";
+
+        bubble.appendChild(
+          sticker
         );
       }
 
@@ -4949,6 +5017,8 @@ function renderEmojiPanel() {
 
 function toggleEmojiPanel() {
 
+  closeStickerPanel();
+
   emojiPanel
     .classList
     .toggle(
@@ -4960,6 +5030,116 @@ function toggleEmojiPanel() {
 function closeEmojiPanel() {
 
   emojiPanel
+    .classList
+    .add(
+      "hidden"
+    );
+}
+
+
+function createStickerUrl(
+  label,
+  background,
+  color
+) {
+
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">' +
+    '<rect width="240" height="180" rx="28" fill="' + background + '"/>' +
+    '<path d="M35 132c30 20 140 20 170 0" fill="none" stroke="' + color + '" stroke-width="8" stroke-linecap="round"/>' +
+    '<circle cx="76" cy="72" r="10" fill="' + color + '"/>' +
+    '<circle cx="164" cy="72" r="10" fill="' + color + '"/>' +
+    '<text x="120" y="115" text-anchor="middle" font-family="Arial,sans-serif" font-size="29" font-weight="700" fill="' + color + '">' + label + '</text>' +
+    '</svg>';
+
+  return "data:image/svg+xml;base64," +
+    btoa(
+      svg
+    );
+}
+
+
+function renderStickerPanel() {
+
+  stickerPanel.innerHTML =
+    "";
+
+  STICKER_CHOICES.forEach(
+    ([label, background, color]) => {
+
+      const stickerUrl =
+        createStickerUrl(
+          label,
+          background,
+          color
+        );
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+      const image =
+        document.createElement(
+          "img"
+        );
+
+      button.type =
+        "button";
+
+      button.setAttribute(
+        "aria-label",
+        "Kirim stiker " + label
+      );
+
+      image.src =
+        stickerUrl;
+
+      image.alt =
+        label;
+
+      button.appendChild(
+        image
+      );
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          selectedSticker = {
+            label,
+            url: stickerUrl
+          };
+
+          closeStickerPanel();
+
+          sendMessage();
+        }
+      );
+
+      stickerPanel.appendChild(
+        button
+      );
+    }
+  );
+}
+
+
+function toggleStickerPanel() {
+
+  closeEmojiPanel();
+
+  stickerPanel
+    .classList
+    .toggle(
+      "hidden"
+    );
+}
+
+
+function closeStickerPanel() {
+
+  stickerPanel
     .classList
     .add(
       "hidden"
@@ -5963,6 +6143,14 @@ function getPreviewText(
   }
 
   if (
+    message.type ===
+    "sticker"
+  ) {
+
+    return "🧸 Stiker";
+  }
+
+  if (
     isVideoMessage(
       message
     )
@@ -6606,6 +6794,20 @@ emojiButton
 
 renderEmojiPanel();
 
+stickerButton
+  .addEventListener(
+    "click",
+    event => {
+
+      event.stopPropagation();
+
+      toggleStickerPanel();
+    }
+  );
+
+
+renderStickerPanel();
+
 
 /* =========================================================
    MESSAGE MENU EVENTS
@@ -6795,6 +6997,24 @@ document.addEventListener(
     ) {
 
       closeEmojiPanel();
+    }
+
+    if (
+      !stickerPanel
+        .classList
+        .contains(
+          "hidden"
+        )
+      &&
+      !stickerPanel.contains(
+        event.target
+      )
+      &&
+      event.target !==
+      stickerButton
+    ) {
+
+      closeStickerPanel();
     }
   }
 );
