@@ -3122,6 +3122,14 @@ const isImageUpload =
 
     imageUrl =
       selectedSticker.url;
+
+    /*
+     * Simpan URL ke pesan ini, lalu kosongkan
+     * pilihan agar chat berikutnya tidak ikut
+     * mengirim stiker yang sama.
+     */
+    selectedSticker =
+      null;
   }
 
   if (
@@ -3326,9 +3334,6 @@ const isImageUpload =
       }
 
       selectedUploadFile =
-        null;
-
-      selectedSticker =
         null;
 
       fileUploadInput.value =
