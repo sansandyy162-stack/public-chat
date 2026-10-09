@@ -360,6 +360,11 @@ const menuCopy =
     "menuCopy"
   );
 
+const menuFavoriteSticker =
+  document.getElementById(
+    "menuFavoriteSticker"
+  );
+
 const menuEdit =
   document.getElementById(
     "menuEdit"
@@ -4482,6 +4487,39 @@ function openMessageMenu(
     ...message
   };
 
+  const isSticker =
+    message.type ===
+    "sticker" &&
+    message.image_url;
+
+  menuFavoriteSticker
+    .classList
+    .toggle(
+      "hidden",
+      !isSticker
+    );
+
+  if (
+    isSticker
+  ) {
+
+    const stickerId =
+      getStickerIdFromMessage(
+        message
+      );
+
+    const isFavorite =
+      getFavoriteStickerLabels()
+        .includes(
+          stickerId
+        );
+
+    menuFavoriteSticker.innerHTML =
+      isFavorite
+        ? "<span>☆</span> Hapus dari favorit"
+        : "<span>★</span> Favoritkan stiker";
+  }
+
   menuEdit
     .classList
     .toggle(
@@ -5508,6 +5546,97 @@ function saveCustomStickers(
       )
     )
   );
+}
+
+
+function getStickerIdFromMessage(
+  message
+) {
+
+  const saved =
+    getCustomStickers()
+      .find(
+        sticker =>
+          sticker.url ===
+          message.image_url
+      );
+
+  if (
+    saved
+  ) {
+
+    return saved.id;
+  }
+
+  let hash =
+    0;
+
+  const source =
+    message.image_url ||
+    "";
+
+  for (
+    let index = 0;
+    index < source.length;
+    index += 1
+  ) {
+
+    hash =
+      (
+        (hash << 5) -
+        hash +
+        source.charCodeAt(
+          index
+        )
+      ) |
+      0;
+  }
+
+  return "saved-" +
+    (
+      hash >>> 0
+    ).toString(
+      36
+    );
+}
+
+
+function toggleFavoriteStickerFromMessage(
+  message
+) {
+
+  const id =
+    getStickerIdFromMessage(
+      message
+    );
+
+  const exists =
+    getCustomStickers()
+      .some(
+        sticker =>
+          sticker.id === id
+      );
+
+  if (
+    !exists
+  ) {
+
+    saveCustomSticker(
+      {
+        id,
+        label:
+          "Stiker favorit",
+        url:
+          message.image_url
+      }
+    );
+  }
+
+  toggleFavoriteSticker(
+    id
+  );
+
+  renderStickerPanel();
 }
 
 
@@ -7593,6 +7722,38 @@ menuCopy
         await copyMessage(
           message
         );
+      }
+    }
+  );
+
+menuFavoriteSticker
+  .addEventListener(
+    "click",
+    () => {
+
+      const message =
+        selectedMessage;
+
+      closeMessageMenu();
+
+      if (
+        message &&
+        message.type ===
+        "sticker" &&
+        message.image_url
+      ) {
+
+        try {
+
+          toggleFavoriteStickerFromMessage(
+            message
+          );
+        } catch {
+
+          alert(
+            "Stiker belum bisa disimpan ke favorit."
+          );
+        }
       }
     }
   );
