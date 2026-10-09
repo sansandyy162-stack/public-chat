@@ -1312,7 +1312,7 @@ button {
 }
 
 .message-sticker {
-  width: min(150px, 100%);
+  width: min(100px, 100%);
   height: auto;
 
   display: block;
