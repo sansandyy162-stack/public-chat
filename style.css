@@ -658,6 +658,8 @@ button {
 }
 
 .sticker-bubble .message-meta {
+  width: max-content;
+  margin-left: auto;
   padding-right: 3px;
   white-space: nowrap;
 }
