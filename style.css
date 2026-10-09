@@ -641,14 +641,25 @@ button {
 .message-bubble.sticker-bubble,
 .mine .message-bubble.sticker-bubble,
 .other .message-bubble.sticker-bubble {
+  width: fit-content;
+  max-width: 100%;
   padding: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
+.mine .message-bubble.sticker-bubble {
+  margin-left: auto;
+}
+
+.other .message-bubble.sticker-bubble {
+  margin-right: auto;
+}
+
 .sticker-bubble .message-meta {
   padding-right: 3px;
+  white-space: nowrap;
 }
 
 .message-bubble:active {
