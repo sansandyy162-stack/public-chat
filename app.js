@@ -4039,7 +4039,13 @@ function renderMessages(
         );
 
       bubble.className =
-        "message-bubble";
+        "message-bubble" +
+        (
+          message.type ===
+          "sticker"
+            ? " sticker-bubble"
+            : ""
+        );
 
 
       /* =========================

@@ -638,6 +638,19 @@ button {
   border-bottom-left-radius: 2px;
 }
 
+.message-bubble.sticker-bubble,
+.mine .message-bubble.sticker-bubble,
+.other .message-bubble.sticker-bubble {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sticker-bubble .message-meta {
+  padding-right: 3px;
+}
+
 .message-bubble:active {
   opacity: .9;
 }
@@ -1299,7 +1312,7 @@ button {
 }
 
 .message-sticker {
-  width: min(190px, 100%);
+  width: min(220px, 100%);
   height: auto;
 
   display: block;
