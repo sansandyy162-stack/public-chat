@@ -641,8 +641,9 @@ button {
 .message-bubble.sticker-bubble,
 .mine .message-bubble.sticker-bubble,
 .other .message-bubble.sticker-bubble {
-  width: fit-content;
-  max-width: 100%;
+  flex: 0 0 100px;
+  width: 100px;
+  max-width: 100px;
   padding: 0;
   border-radius: 0;
   background: transparent;
