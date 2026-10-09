@@ -1037,20 +1037,22 @@ button {
   display: flex;
   gap: 6px;
   margin-bottom: 10px;
+  border-bottom: 1px solid #e7eaec;
 }
 
 .sticker-tabs button {
-  min-height: 32px;
+  min-height: 34px;
+  min-width: 40px;
   padding: 5px 10px;
   border: 0;
-  border-radius: 16px;
-  background: #f0f2f5;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
   color: #54656f;
-  font-size: 13px;
+  font-size: 18px;
 }
 
 .sticker-tabs button.active {
-  background: #d9fdd3;
+  background: #e9f8f3;
   color: #007b5e;
   font-weight: 700;
 }
@@ -1063,6 +1065,26 @@ button {
 
 .sticker-item {
   position: relative;
+}
+
+.add-sticker-button {
+  min-height: 86px;
+  padding: 5px;
+  border: 1px solid #d8dfe3;
+  border-radius: 10px;
+  background: #fff;
+  color: #667781;
+}
+
+.add-sticker-button strong {
+  display: block;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 42px;
+}
+
+.add-sticker-button span {
+  font-size: 11px;
 }
 
 .sticker-item > button:first-child {

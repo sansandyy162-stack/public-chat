@@ -85,6 +85,9 @@ const STICKER_CHOICES = [
 const STICKER_FAVORITES_KEY =
   "private-chat-favorite-stickers";
 
+const CUSTOM_STICKERS_KEY =
+  "private-chat-custom-stickers";
+
 const DEFAULT_FAVICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2300a884'/%3E%3Cpath d='M14 17h36v25H29L18 51v-9h-4z' fill='white'/%3E%3C/svg%3E";
 
@@ -424,6 +427,11 @@ const stickerButton =
 const stickerPanel =
   document.getElementById(
     "stickerPanel"
+  );
+
+const stickerUploadInput =
+  document.getElementById(
+    "stickerUploadInput"
   );
 
 const attachmentButton =
@@ -5068,7 +5076,7 @@ function renderStickerPanel() {
   stickerPanel.innerHTML =
     "";
 
-  const favoriteLabels =
+  const favoriteIds =
     getFavoriteStickerLabels();
 
   const tabs =
@@ -5080,10 +5088,10 @@ function renderStickerPanel() {
     "sticker-tabs";
 
   [
-    ["all", "Semua"],
-    ["favorites", "★ Favorit"]
+    ["all", "◷"],
+    ["favorites", "★"]
   ].forEach(
-    ([view, label]) => {
+    ([view, icon]) => {
 
       const tab =
         document.createElement(
@@ -5099,7 +5107,7 @@ function renderStickerPanel() {
           : "";
 
       tab.textContent =
-        label;
+        icon;
 
       tab.addEventListener(
         "click",
@@ -5126,15 +5134,70 @@ function renderStickerPanel() {
   grid.className =
     "sticker-grid";
 
+  const addButton =
+    document.createElement(
+      "button"
+    );
+
+  addButton.type =
+    "button";
+
+  addButton.className =
+    "add-sticker-button";
+
+  addButton.innerHTML =
+    "<strong>＋</strong><span>Tambah</span>";
+
+  addButton.setAttribute(
+    "aria-label",
+    "Tambah stiker gambar"
+  );
+
+  addButton.addEventListener(
+    "click",
+    () => {
+
+      stickerUploadInput.click();
+    }
+  );
+
+  const builtInStickers =
+    STICKER_CHOICES.map(
+      ([label, background, color]) => ({
+        id: "built-in-" + label,
+        label,
+        url: createStickerUrl(
+          label,
+          background,
+          color
+        )
+      })
+    );
+
+  const allStickers =
+    [
+      ...getCustomStickers(),
+      ...builtInStickers
+    ];
+
   const stickers =
     stickerPanelView === "favorites"
-      ? STICKER_CHOICES.filter(
-        ([label]) =>
-          favoriteLabels.includes(
-            label
+      ? allStickers.filter(
+        sticker =>
+          favoriteIds.includes(
+            sticker.id
           )
       )
-      : STICKER_CHOICES;
+      : allStickers;
+
+  if (
+    stickerPanelView === "all"
+  ) {
+
+    grid.appendChild(
+      addButton
+    );
+  }
 
   if (
     !stickers.length
@@ -5157,14 +5220,11 @@ function renderStickerPanel() {
   }
 
   stickers.forEach(
-    ([label, background, color]) => {
-
-      const stickerUrl =
-        createStickerUrl(
-          label,
-          background,
-          color
-        );
+    ({
+      id,
+      label,
+      url
+    }) => {
 
       const sticker =
         document.createElement(
@@ -5203,8 +5263,8 @@ function renderStickerPanel() {
       favoriteButton.className =
         "favorite-sticker-button" +
         (
-          favoriteLabels.includes(
-            label
+          favoriteIds.includes(
+            id
           )
             ? " active"
             : ""
@@ -5219,7 +5279,7 @@ function renderStickerPanel() {
         "★";
 
       image.src =
-        stickerUrl;
+        url;
 
       image.alt =
         label;
@@ -5234,7 +5294,7 @@ function renderStickerPanel() {
 
           selectedSticker = {
             label,
-            url: stickerUrl
+            url
           };
 
           closeStickerPanel();
@@ -5248,7 +5308,7 @@ function renderStickerPanel() {
         () => {
 
           toggleFavoriteSticker(
-            label
+            id
           );
 
           renderStickerPanel();
@@ -5293,12 +5353,70 @@ function getFavoriteStickerLabels() {
     return Array.isArray(
       saved
     )
-      ? saved
+      ? saved.map(
+        favorite =>
+          STICKER_CHOICES.some(
+            ([label]) =>
+              label === favorite
+          )
+            ? "built-in-" + favorite
+            : favorite
+      )
       : [];
   } catch {
 
     return [];
   }
+}
+
+
+function getCustomStickers() {
+
+  try {
+
+    const saved =
+      JSON.parse(
+        localStorage.getItem(
+          CUSTOM_STICKERS_KEY
+        ) || "[]"
+      );
+
+    return Array.isArray(
+      saved
+    )
+      ? saved.filter(
+        sticker =>
+          sticker &&
+          sticker.id &&
+          sticker.url
+      )
+      : [];
+  } catch {
+
+    return [];
+  }
+}
+
+
+function saveCustomSticker(
+  sticker
+) {
+
+  const stickers =
+    getCustomStickers();
+
+  localStorage.setItem(
+    CUSTOM_STICKERS_KEY,
+    JSON.stringify(
+      [
+        sticker,
+        ...stickers
+      ].slice(
+        0,
+        24
+      )
+    )
+  );
 }
 
 
@@ -6978,6 +7096,79 @@ fileUploadInput
       autoResizeMessageInput();
 
       messageInput.focus();
+    }
+  );
+
+stickerUploadInput
+  .addEventListener(
+    "change",
+    () => {
+
+      const file =
+        stickerUploadInput.files[0];
+
+      if (
+        !file
+      ) {
+        return;
+      }
+
+      if (
+        file.size >
+        900 * 1024
+      ) {
+
+        alert(
+          "Stiker maksimal 900 KB supaya tetap ringan."
+        );
+
+        stickerUploadInput.value =
+          "";
+
+        return;
+      }
+
+      const reader =
+        new FileReader();
+
+      reader.addEventListener(
+        "load",
+        () => {
+
+          try {
+
+            saveCustomSticker(
+              {
+                id:
+                  "custom-" +
+                  (
+                    crypto.randomUUID
+                      ? crypto.randomUUID()
+                      : Date.now()
+                  ),
+                label:
+                  file.name,
+                url:
+                  reader.result
+              }
+            );
+
+            renderStickerPanel();
+          } catch {
+
+            alert(
+              "Penyimpanan stiker penuh. Hapus stiker lama dari browser lalu coba lagi."
+            );
+          }
+
+          stickerUploadInput.value =
+            "";
+        }
+      );
+
+      reader.readAsDataURL(
+        file
+      );
     }
   );
 
