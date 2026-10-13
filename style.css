@@ -15,7 +15,7 @@ body {
 
 body {
   font-family:
-    Inter,
+    Roboto,
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -634,7 +634,7 @@ button {
  * BIRU
  */
 .mine .message-bubble {
-  background: #D1E7FB;
+  background: #DCEBFA;
   border-bottom-right-radius: 4px;
 }
 
