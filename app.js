@@ -4043,6 +4043,49 @@ function renderMessages(
             : "other"
         );
 
+      const avatar =
+        document.createElement(
+          "div"
+        );
+
+      const messageUser =
+        mine
+          ? (
+            currentProfile ||
+            currentUser
+          )
+          : currentPartner;
+
+      const avatarUrl =
+        messageUser &&
+        messageUser.avatar_url;
+
+      avatar.className =
+        "message-avatar";
+
+      if (
+        avatarUrl
+      ) {
+
+        avatar.style.backgroundImage =
+          "url('" +
+          avatarUrl +
+          "')";
+      } else {
+
+        avatar.textContent =
+          getInitial(
+            (
+              messageUser &&
+              (
+                messageUser.name ||
+                messageUser.email
+              )
+            ) ||
+            "?"
+          );
+      }
+
       const bubble =
         document.createElement(
           "div"
@@ -4392,9 +4435,27 @@ function renderMessages(
         );
       }
 
+      if (
+        !mine
+      ) {
+
+        row.appendChild(
+          avatar
+        );
+      }
+
       row.appendChild(
         bubble
       );
+
+      if (
+        mine
+      ) {
+
+        row.appendChild(
+          avatar
+        );
+      }
 
       messagesElement.appendChild(
         row

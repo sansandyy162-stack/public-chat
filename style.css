@@ -15,12 +15,15 @@ body {
 
 body {
   font-family:
-    Arial,
-    Helvetica,
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
     sans-serif;
 
-  background: #e9edef;
-  color: #111b21;
+  background: #f7f8fa;
+  color: #20252b;
 
   overflow: hidden;
 }
@@ -468,18 +471,18 @@ button {
 }
 
 .chat-header {
-  min-height: 70px;
+  min-height: 72px;
 
-  padding: 10px 15px;
+  padding: 10px 20px;
 
   display: flex;
   align-items: center;
 
   gap: 10px;
 
-  background: #f0f2f5;
+  background: rgba(255, 255, 255, .96);
 
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #edf0f3;
 
   z-index: 5;
 }
@@ -498,10 +501,10 @@ button {
 }
 
 .partner-avatar {
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
 
-  flex: 0 0 42px;
+  flex: 0 0 46px;
 
   display: flex;
 
@@ -510,9 +513,10 @@ button {
 
   border-radius: 50%;
 
-  background: #dfe5e7;
+  background: #e7ebf1;
 
-  font-weight: bold;
+  color: #304052;
+  font-weight: 700;
 }
 
 .partner-info {
@@ -523,18 +527,20 @@ button {
 .partner-name {
   overflow: hidden;
 
-  font-weight: bold;
+  color: #20252b;
+  font-size: 18px;
+  font-weight: 700;
 
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .partner-status {
-  margin-top: 3px;
+  margin-top: 2px;
 
-  color: #667781;
+  color: #94a0ac;
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .chat-header-button {
@@ -568,10 +574,10 @@ button {
   overflow-y: auto;
 
   padding:
-    20px
-    clamp(10px, 5vw, 55px);
+    28px
+    clamp(16px, 7vw, 78px);
 
-  background-color: #f3f4f6;
+  background-color: #fbfcfd;
 
   background-position: center;
   background-repeat: no-repeat;
@@ -585,7 +591,13 @@ button {
 
   display: flex;
 
-  margin-bottom: 8px;
+  align-items: flex-end;
+
+  gap: 10px;
+
+  margin-bottom: 20px;
+
+  padding-top: 19px;
 }
 
 .message-row.mine {
@@ -599,19 +611,17 @@ button {
 .message-bubble {
   max-width:
     min(
-      75%,
-      520px
+      68%,
+      460px
     );
 
-  padding: 7px 9px 5px;
+  padding: 13px 16px 12px;
 
   position: relative;
 
-  border-radius: 9px;
+  border-radius: 13px;
 
-  box-shadow:
-    0 1px 1px
-    rgba(0, 0, 0, .12);
+  box-shadow: 0 2px 12px rgba(32, 37, 43, .04);
 
   cursor: pointer;
 
@@ -624,8 +634,8 @@ button {
  * BIRU
  */
 .mine .message-bubble {
-  background: #C9DAF8;
-  border-bottom-right-radius: 2px;
+  background: #e6ebf3;
+  border-bottom-right-radius: 4px;
 }
 
 
@@ -634,8 +644,8 @@ button {
  * PUTIH
  */
 .other .message-bubble {
-  background: #FFFFFF;
-  border-bottom-left-radius: 2px;
+  background: #ffffff;
+  border-bottom-left-radius: 4px;
 }
 
 .message-bubble.sticker-bubble,
@@ -669,10 +679,35 @@ button {
   opacity: .9;
 }
 
-.message-text {
-  font-size: 14px;
+.message-avatar {
+  width: 42px;
+  height: 42px;
 
-  line-height: 1.4;
+  flex: 0 0 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  border-radius: 50%;
+
+  background-color: #e2e7ed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  color: #405168;
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.message-text {
+  font-size: 17px;
+
+  line-height: 1.42;
 
   white-space: pre-wrap;
 
@@ -804,7 +839,12 @@ button {
 }
 
 .message-meta {
-  margin-top: 4px;
+  position: absolute;
+
+  top: -20px;
+  right: 1px;
+
+  margin: 0;
 
   display: flex;
 
@@ -813,9 +853,18 @@ button {
 
   gap: 5px;
 
-  color: #667781;
+  color: #a0a9b4;
 
-  font-size: 9px;
+  font-size: 11px;
+
+  white-space: nowrap;
+}
+
+.other .message-meta {
+  right: auto;
+  left: 1px;
+
+  justify-content: flex-start;
 }
 
 .edited-label {
@@ -826,7 +875,7 @@ button {
 }
 
 .message-status {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .message-status.pending,
@@ -835,7 +884,7 @@ button {
 }
 
 .message-status.read {
-  color: #008cff;
+  color: #849eb5;
   font-weight: bold;
 }
 
@@ -1174,7 +1223,7 @@ button {
 ========================================================= */
 
 .composer {
-  min-height: 65px;
+  min-height: 72px;
 
   padding:
     9px
@@ -1190,7 +1239,9 @@ button {
 
   align-items: flex-end;
 
-  background: #f0f2f5;
+  background: #ffffff;
+
+  border-top: 1px solid #edf0f3;
 }
 
 .image-paste-preview {
@@ -1264,7 +1315,7 @@ button {
 
   padding: 11px 16px;
 
-  border: 0;
+  border: 1px solid #e4e8ed;
 
   border-radius: 22px;
 
@@ -1274,7 +1325,7 @@ button {
 
   overflow-y: auto;
 
-  background: white;
+  background: #f7f8fa;
 
   line-height: 22px;
 }
@@ -1282,7 +1333,7 @@ button {
 .composer textarea:focus {
   box-shadow:
     0 0 0 1px
-    rgba(0, 168, 132, .15);
+    rgba(91, 116, 146, .16);
 }
 
 .attachment-button,
@@ -1302,15 +1353,15 @@ button {
 .attachment-button,
 .sticker-button,
 .emoji-button {
-  background: white;
+  background: #f7f8fa;
 
-  color: #54656f;
+  color: #788595;
 
   font-size: 20px;
 }
 
 .send-button {
-  background: #00a884;
+  background: #7f9ab6;
 
   color: white;
 
