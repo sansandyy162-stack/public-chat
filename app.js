@@ -139,6 +139,7 @@ let selectedUploadFile = null;
 let selectedSticker = null;
 let stickerPanelView = "all";
 let stickerImportStatus = "";
+let cloudStickers = [];
 
 
 /* =========================================================
@@ -235,6 +236,21 @@ const myEmail =
     "myEmail"
   );
 
+const profilePhotoButton =
+  document.getElementById(
+    "profilePhotoButton"
+  );
+
+const profilePhotoInput =
+  document.getElementById(
+    "profilePhotoInput"
+  );
+
+const myProfileInitial =
+  document.getElementById(
+    "myProfileInitial"
+  );
+
 const logoutButton =
   document.getElementById(
     "logoutButton"
@@ -268,6 +284,11 @@ const partnerName =
 const partnerInitial =
   document.getElementById(
     "partnerInitial"
+  );
+
+const partnerAvatar =
+  document.getElementById(
+    "partnerAvatar"
   );
 
 const partnerStatus =
@@ -922,6 +943,10 @@ async function startApp() {
   myEmail.textContent =
     currentUser.email || "";
 
+  renderProfilePhoto();
+
+  await loadCloudStickers();
+
   currentPartner = null;
   currentRoomId = null;
 
@@ -1011,6 +1036,120 @@ async function loadMyProfile() {
 }
 
 
+function renderProfilePhoto() {
+
+  if (
+    !currentProfile
+  ) {
+    return;
+  }
+
+  myProfileInitial.textContent =
+    getInitial(
+      currentProfile.name ||
+      currentUser.email
+    );
+
+  profilePhotoButton.style.backgroundImage =
+    currentProfile.avatar_url
+      ? "url('" +
+        currentProfile.avatar_url +
+        "')"
+      : "";
+
+  myProfileInitial.style.display =
+    currentProfile.avatar_url
+      ? "none"
+      : "";
+}
+
+
+async function uploadProfilePhoto(
+  file
+) {
+
+  const extension =
+    getFileExtension(
+      file
+    );
+
+  const path =
+    "profiles/" +
+    currentUser.id +
+    "/avatar-" +
+    crypto.randomUUID() +
+    "." +
+    extension;
+
+  const {
+    error: uploadError
+  } =
+    await supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .upload(
+        path,
+        file,
+        {
+          cacheControl: "3600",
+          upsert: false
+        }
+      );
+
+  if (
+    uploadError
+  ) {
+    throw uploadError;
+  }
+
+  const {
+    data: publicUrlData
+  } =
+    supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .getPublicUrl(
+        path
+      );
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "profiles"
+      )
+      .update({
+        avatar_url:
+          publicUrlData.publicUrl
+      })
+      .eq(
+        "id",
+        currentUser.id
+      )
+      .select()
+      .single();
+
+  if (
+    error
+  ) {
+    throw error;
+  }
+
+  currentProfile =
+    data;
+
+  renderProfilePhoto();
+  renderUsers();
+  renderMessages();
+}
+
+
 async function editDisplayName() {
 
   if (
@@ -1092,6 +1231,8 @@ async function editDisplayName() {
 
     myName.textContent =
       data.name;
+
+    renderProfilePhoto();
 
   } catch (error) {
 
@@ -1820,6 +1961,25 @@ function renderUsers() {
           user.name
         );
 
+      if (
+        user.avatar_url
+      ) {
+
+        avatar.textContent =
+          "";
+
+        avatar.style.backgroundImage =
+          "url('" +
+          user.avatar_url +
+          "')";
+
+        avatar.style.backgroundPosition =
+          "center";
+
+        avatar.style.backgroundSize =
+          "cover";
+      }
+
 
       /* =========================
          USER INFO
@@ -2070,6 +2230,18 @@ async function openChat(
       currentPartner.name
     );
 
+  partnerAvatar.style.backgroundImage =
+    currentPartner.avatar_url
+      ? "url('" +
+        currentPartner.avatar_url +
+        "')"
+      : "";
+
+  partnerInitial.style.display =
+    currentPartner.avatar_url
+      ? "none"
+      : "";
+
   refreshPartnerStatus();
 
   emptyChat
@@ -2164,6 +2336,8 @@ async function closeMobileChat() {
 
   partnerName.textContent = "";
   partnerInitial.textContent = "";
+  partnerInitial.style.display = "";
+  partnerAvatar.style.backgroundImage = "";
   partnerStatus.textContent = "";
 
   messagesElement.innerHTML =
@@ -5320,9 +5494,17 @@ function renderStickerPanel() {
 
   const allStickers =
     [
+      ...cloudStickers,
       ...getCustomStickers(),
       ...builtInStickers
-    ];
+    ].filter(
+      (sticker, index, stickers) =>
+        stickers.findIndex(
+          item =>
+            item.url ===
+            sticker.url
+        ) === index
+    );
 
   const stickers =
     stickerPanelView === "favorites"
@@ -5563,6 +5745,157 @@ function getCustomStickers() {
 
     return [];
   }
+}
+
+
+async function loadCloudStickers() {
+
+  if (
+    !currentUser
+  ) {
+    return;
+  }
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "user_stickers"
+      )
+      .select(
+        "id,label,image_url,created_at"
+      )
+      .eq(
+        "owner_id",
+        currentUser.id
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false
+        }
+      );
+
+  if (
+    error
+  ) {
+
+    console.error(
+      "Cloud stickers:",
+      error
+    );
+
+    return;
+  }
+
+  cloudStickers =
+    (data || []).map(
+      sticker => ({
+        id: "cloud-" + sticker.id,
+        label: sticker.label,
+        url: sticker.image_url
+      })
+    );
+
+  renderStickerPanel();
+}
+
+
+async function saveStickerToCloud(
+  file
+) {
+
+  if (
+    !currentUser
+  ) {
+    throw new Error(
+      "Akun belum siap."
+    );
+  }
+
+  const extension =
+    getFileExtension(
+      file
+    );
+
+  const path =
+    "stickers/" +
+    currentUser.id +
+    "/" +
+    crypto.randomUUID() +
+    "." +
+    extension;
+
+  const {
+    error: uploadError
+  } =
+    await supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .upload(
+        path,
+        file,
+        {
+          cacheControl: "3600",
+          upsert: false
+        }
+      );
+
+  if (
+    uploadError
+  ) {
+    throw uploadError;
+  }
+
+  const {
+    data: urlData
+  } =
+    supabaseClient
+      .storage
+      .from(
+        CHAT_IMAGE_BUCKET
+      )
+      .getPublicUrl(
+        path
+      );
+
+  const {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "user_stickers"
+      )
+      .insert({
+        owner_id: currentUser.id,
+        label: file.name,
+        image_url: urlData.publicUrl
+      })
+      .select(
+        "id,label,image_url"
+      )
+      .single();
+
+  if (
+    error
+  ) {
+    throw error;
+  }
+
+  cloudStickers.unshift(
+    {
+      id: "cloud-" + data.id,
+      label: data.label,
+      url: data.image_url
+    }
+  );
+
+  renderStickerPanel();
 }
 
 
@@ -7261,6 +7594,79 @@ sendButton
     sendMessage
   );
 
+profilePhotoButton
+  .addEventListener(
+    "click",
+    () => {
+
+      profilePhotoInput.click();
+    }
+  );
+
+
+profilePhotoInput
+  .addEventListener(
+    "change",
+    async () => {
+
+      const file =
+        profilePhotoInput.files[0];
+
+      if (
+        !file
+      ) {
+        return;
+      }
+
+      if (
+        !file.type.startsWith(
+          "image/"
+        ) ||
+        file.size >
+        3 * 1024 * 1024
+      ) {
+
+        alert(
+          "Gunakan foto PNG, JPG, atau WebP maksimal 3 MB."
+        );
+
+        profilePhotoInput.value =
+          "";
+
+        return;
+      }
+
+      profilePhotoButton.disabled =
+        true;
+
+      try {
+
+        await uploadProfilePhoto(
+          file
+        );
+      } catch (
+        error
+      ) {
+
+        console.error(
+          "Profile photo:",
+          error
+        );
+
+        alert(
+          "Foto profil gagal diunggah. Coba lagi."
+        );
+      } finally {
+
+        profilePhotoButton.disabled =
+          false;
+
+        profilePhotoInput.value =
+          "";
+      }
+    }
+  );
+
 
 messageInput
   .addEventListener(
@@ -7589,7 +7995,7 @@ fileUploadInput
 stickerUploadInput
   .addEventListener(
     "change",
-    () => {
+    async () => {
 
       const file =
         stickerUploadInput.files[0];
@@ -7615,47 +8021,28 @@ stickerUploadInput
         return;
       }
 
-      const reader =
-        new FileReader();
+      try {
 
-      reader.addEventListener(
-        "load",
-        () => {
+        await saveStickerToCloud(
+          file
+        );
+      } catch (
+        error
+      ) {
 
-          try {
+        console.error(
+          "Sticker upload:",
+          error
+        );
 
-            saveCustomSticker(
-              {
-                id:
-                  "custom-" +
-                  (
-                    crypto.randomUUID
-                      ? crypto.randomUUID()
-                      : Date.now()
-                  ),
-                label:
-                  file.name,
-                url:
-                  reader.result
-              }
-            );
+        alert(
+          "Stiker gagal disimpan. Coba lagi."
+        );
+      } finally {
 
-            renderStickerPanel();
-          } catch {
-
-            alert(
-              "Penyimpanan stiker penuh. Hapus stiker lama dari browser lalu coba lagi."
-            );
-          }
-
-          stickerUploadInput.value =
-            "";
-        }
-      );
-
-      reader.readAsDataURL(
-        file
-      );
+        stickerUploadInput.value =
+          "";
+      }
     }
   );
 

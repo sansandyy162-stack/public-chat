@@ -208,6 +208,25 @@
 
       <header class="sidebar-header">
 
+        <div class="my-profile-photo-wrap">
+          <button
+            id="profilePhotoButton"
+            class="my-profile-photo"
+            type="button"
+            title="Ubah foto profil"
+            aria-label="Ubah foto profil"
+          >
+            <span id="myProfileInitial">?</span>
+          </button>
+
+          <input
+            id="profilePhotoInput"
+            class="hidden"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+          >
+        </div>
+
         <div>
 
           <div class="app-title">
@@ -306,7 +325,10 @@
             ←
           </button>
 
-          <div class="partner-avatar">
+          <div
+            id="partnerAvatar"
+            class="partner-avatar"
+          >
 
             <span id="partnerInitial">
               ?
