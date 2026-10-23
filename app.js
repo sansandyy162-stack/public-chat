@@ -300,6 +300,11 @@ const logoutButton =
     "logoutButton"
   );
 
+const installAppButton =
+  document.getElementById(
+    "installAppButton"
+  );
+
 const editNameButton =
   document.getElementById(
     "editNameButton"
@@ -9918,6 +9923,129 @@ document.addEventListener(
     }
   }
 );
+
+
+/* =========================================================
+   PWA — SERVICE WORKER & INSTALL APP
+
+   - Service worker (sw.js) membuat web ini bisa
+     dipasang sebagai aplikasi Android (PWA):
+     ikon di layar utama, fullscreen, tanpa
+     address bar browser.
+   - Tombol "Jadikan Aplikasi" muncul di sidebar
+     hanya saat browser menawarkan instalasi
+     (event beforeinstallprompt, Chrome/Android).
+========================================================= */
+
+if (
+  "serviceWorker" in navigator
+) {
+
+  window.addEventListener(
+    "load",
+    () => {
+
+      navigator.serviceWorker
+        .register(
+          "sw.js"
+        )
+        .catch(
+          error => {
+
+            console.log(
+              "ServiceWorker:",
+              error
+            );
+          }
+        );
+    }
+  );
+}
+
+
+let deferredInstallPrompt =
+  null;
+
+
+window.addEventListener(
+  "beforeinstallprompt",
+  event => {
+
+    event.preventDefault();
+
+    deferredInstallPrompt =
+      event;
+
+    if (
+      installAppButton
+    ) {
+
+      installAppButton
+        .classList
+        .remove(
+          "hidden"
+        );
+    }
+  }
+);
+
+
+window.addEventListener(
+  "appinstalled",
+  () => {
+
+    deferredInstallPrompt =
+      null;
+
+    if (
+      installAppButton
+    ) {
+
+      installAppButton
+        .classList
+        .add(
+          "hidden"
+        );
+    }
+  }
+);
+
+
+if (
+  installAppButton
+) {
+
+  installAppButton
+    .addEventListener(
+      "click",
+      async () => {
+
+        if (
+          !deferredInstallPrompt
+        ) {
+          return;
+        }
+
+        deferredInstallPrompt
+          .prompt();
+
+        await deferredInstallPrompt
+          .userChoice
+          .catch(
+            () => null
+          );
+
+        deferredInstallPrompt =
+          null;
+
+        installAppButton
+          .classList
+          .add(
+            "hidden"
+          );
+      }
+    );
+}
 
 
 /* =========================================================

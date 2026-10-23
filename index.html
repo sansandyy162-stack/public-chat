@@ -14,6 +14,36 @@
     content="#075e54"
   >
 
+  <link
+    rel="manifest"
+    href="manifest.webmanifest"
+  >
+
+  <meta
+    name="mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+  >
+
+  <meta
+    name="apple-mobile-web-app-title"
+    content="Private Chat"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="icons/icon-192.png"
+  >
+
   <title>Private Chat</title>
 
   <link
@@ -40,7 +70,7 @@
 
   <link
     rel="stylesheet"
-    href="style.css?v=20261023-2"
+    href="style.css?v=20261023-3"
   >
 </head>
 
@@ -262,6 +292,14 @@
         </button>
 
       </header>
+
+      <button
+        id="installAppButton"
+        class="install-app-button hidden"
+        type="button"
+      >
+        📲 Jadikan Aplikasi — pasang di layar utama
+      </button>
 
 
       <div class="user-list-title">
@@ -801,7 +839,7 @@
   <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
-  <script src="app.js?v=20261023-2"></script>
+  <script src="app.js?v=20261023-3"></script>
 
 </body>
 

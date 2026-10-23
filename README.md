@@ -1,6 +1,22 @@
 # public-chat
 Simple public chat using Google Apps Script
 
+## Pasang sebagai Aplikasi Android (PWA)
+
+Web ini adalah PWA — bisa dipasang jadi aplikasi mandiri di Android
+tanpa Play Store dan tanpa file APK:
+
+1. Buka https://sansandyy162-stack.github.io/public-chat/ di Chrome Android.
+2. Ketuk tombol **"📲 Jadikan Aplikasi"** di sidebar, atau menu ⋮
+   Chrome → **"Instal aplikasi / Tambahkan ke Layar Utama"**.
+3. Ikon "Private Chat" muncul di layar utama — dibuka fullscreen
+   seperti aplikasi biasa, dan update otomatis setiap ada rilis baru.
+
+Teknis: `manifest.webmanifest` + service worker `sw.js`
+(network-first, cache hanya cadangan offline; request Supabase
+tidak pernah di-cache). Setiap rilis: naikkan versi `?v=` di
+`index.html` dan `APP_VERSION` di `sw.js` agar cache lama bersih.
+
 ## Fitur Buzz & Notifikasi Pesan Masuk
 
 - **Tombol BUZZ (⚡)** di composer: mengirim buzz ke pasangan chat —

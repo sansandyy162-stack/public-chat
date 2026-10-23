@@ -1935,3 +1935,30 @@ button {
     display: none;
   }
 }
+
+/* =========================================================
+   PWA — TOMBOL INSTALL APP
+========================================================= */
+
+.install-app-button {
+  margin: 10px 14px 2px;
+
+  padding: 11px 14px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: #00a884;
+  color: #ffffff;
+
+  font-size: 13.5px;
+  font-weight: 600;
+
+  box-shadow: 0 3px 10px rgba(0, 168, 132, .35);
+
+  cursor: pointer;
+}
+
+.install-app-button:active {
+  transform: scale(.98);
+}
