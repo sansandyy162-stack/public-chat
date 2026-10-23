@@ -365,6 +365,11 @@ const buzzButton =
     "buzzButton"
   );
 
+const buzzHeaderButton =
+  document.getElementById(
+    "buzzHeaderButton"
+  );
+
 const buzzOverlay =
   document.getElementById(
     "buzzOverlay"
@@ -4593,20 +4598,39 @@ async function broadcastBuzz() {
 }
 
 
+function getBuzzButtons() {
+
+  return [
+    buzzButton,
+    buzzHeaderButton
+  ].filter(
+    Boolean
+  );
+}
+
+
 function startBuzzCooldown() {
 
   buzzCooldownUntil =
     Date.now() +
     BUZZ_COOLDOWN_MS;
 
+  const buttons =
+    getBuzzButtons();
+
   if (
-    !buzzButton
+    !buttons.length
   ) {
     return;
   }
 
-  buzzButton.disabled =
-    true;
+  buttons.forEach(
+    button => {
+
+      button.disabled =
+        true;
+    }
+  );
 
   if (
     buzzCooldownTimer
@@ -4640,22 +4664,37 @@ function startBuzzCooldown() {
           buzzCooldownTimer =
             null;
 
-          buzzButton.disabled =
-            false;
+          buttons.forEach(
+            button => {
 
-          buzzButton.textContent =
-            "⚡";
+              button.disabled =
+                false;
 
-          buzzButton.title =
-            "Kirim BUZZ! — bunyikan & getarkan layar pasangan";
+              button.textContent =
+                "⚡";
+            }
+          );
+
+          if (
+            buzzButton
+          ) {
+
+            buzzButton.title =
+              "Kirim BUZZ! — bunyikan & getarkan layar pasangan";
+          }
 
           return;
         }
 
-        buzzButton.textContent =
-          String(
-            remaining
-          );
+        buttons.forEach(
+          button => {
+
+            button.textContent =
+              String(
+                remaining
+              );
+          }
+        );
       },
       250
     );
@@ -8968,6 +9007,18 @@ buzzButton
     "click",
     sendBuzz
   );
+
+
+if (
+  buzzHeaderButton
+) {
+
+  buzzHeaderButton
+    .addEventListener(
+      "click",
+      sendBuzz
+    );
+}
 
 
 buzzOverlay

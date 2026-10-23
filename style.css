@@ -1901,3 +1901,37 @@ button {
 
   font-size: 12px;
 }
+
+/*
+ * Tombol BUZZ di header chat:
+ * hanya tampil di HP (<= 700px), menggantikan
+ * tombol buzz di composer.
+ */
+.buzz-header-button {
+  display: none;
+
+  background: #ffc107;
+  color: #5f4300;
+
+  box-shadow: 0 2px 8px rgba(255, 193, 7, .45);
+}
+
+.buzz-header-button:disabled {
+  background: #e4e8ed;
+  color: #9aa5b1;
+
+  box-shadow: none;
+
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+
+  .buzz-header-button {
+    display: block;
+  }
+
+  .composer .buzz-button {
+    display: none;
+  }
+}
