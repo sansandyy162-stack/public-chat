@@ -173,6 +173,14 @@ let titleFlashTimer =
 
 let notificationPermissionAsked =
   false;
+
+/*
+ * Penting di PC: tab bisa "visible" tapi
+ * window browser sedang tidak fokus
+ * (user lagi buka aplikasi lain).
+ */
+let windowIsFocused =
+  true;
 let stickerPanelView = "all";
 let stickerImportStatus = "";
 let cloudStickers = [];
@@ -4055,7 +4063,9 @@ function showBrowserNotification(
       )
     &&
     document.visibilityState ===
-      "visible";
+      "visible"
+    &&
+    windowIsFocused;
 
   if (
     roomOpenWithSender
@@ -4240,11 +4250,35 @@ function triggerBuzzEffect(
 
   playBuzzSound();
 
-  vibrateDevice(
-    [
-      200, 80, 200, 80, 450
-    ]
-  );
+  /*
+   * navigator.vibrate() mengembalikan false
+   * di PC/laptop tanpa motor getar — dipakai
+   * untuk memilih durasi guncangan layar.
+   */
+  let didVibrate =
+    false;
+
+  if (
+    typeof navigator.vibrate ===
+    "function"
+  ) {
+
+    try {
+
+      didVibrate =
+        navigator.vibrate(
+          [
+            200, 80, 200, 80, 450
+          ]
+        ) ===
+        true;
+
+    } catch {
+
+      didVibrate =
+        false;
+    }
+  }
 
   flashDocumentTitle(
     "⚡ BUZZ! dari " +
@@ -4253,15 +4287,26 @@ function triggerBuzzEffect(
 
   /*
    * Goyangkan seluruh layar aplikasi.
+   *
+   * Di PC tidak ada motor getar
+   * (navigator.vibrate tidak tersedia),
+   * jadi guncangannya dibuat lebih lama
+   * sebagai pengganti getaran fisik.
    */
   if (
     appScreen
   ) {
 
+    const shakeClass =
+      didVibrate
+        ? "buzz-shaking"
+        : "buzz-shaking-long";
+
     appScreen
       .classList
       .remove(
-        "buzz-shaking"
+        "buzz-shaking",
+        "buzz-shaking-long"
       );
 
     void appScreen.offsetWidth;
@@ -4269,7 +4314,7 @@ function triggerBuzzEffect(
     appScreen
       .classList
       .add(
-        "buzz-shaking"
+        shakeClass
       );
 
     setTimeout(
@@ -4278,10 +4323,12 @@ function triggerBuzzEffect(
         appScreen
           .classList
           .remove(
-            "buzz-shaking"
+            shakeClass
           );
       },
-      1000
+      didVibrate
+        ? 1000
+        : 1900
     );
   }
 
@@ -4426,7 +4473,9 @@ function notifyIncomingMessage(
       )
     &&
     document.visibilityState ===
-      "visible";
+      "visible"
+    &&
+    windowIsFocused;
 
   playNotificationSound();
 
@@ -8963,6 +9012,32 @@ document
     unlockBuzzAudio,
     {
       once: true
+    }
+  );
+
+
+/*
+ * Lacak fokus window: di PC, tab tetap
+ * "visible" walau user pindah aplikasi.
+ */
+window
+  .addEventListener(
+    "focus",
+    () => {
+
+      windowIsFocused =
+        true;
+    }
+  );
+
+
+window
+  .addEventListener(
+    "blur",
+    () => {
+
+      windowIsFocused =
+        false;
     }
   );
 

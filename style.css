@@ -1817,6 +1817,11 @@ button {
   animation: buzzShake 0.45s ease-in-out 2;
 }
 
+/* PC/laptop tanpa motor getar: guncangan lebih lama */
+.buzz-shaking-long {
+  animation: buzzShake 0.45s ease-in-out 4;
+}
+
 @keyframes buzzShake {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
   10% { transform: translate(-10px, 2px) rotate(-.4deg); }
