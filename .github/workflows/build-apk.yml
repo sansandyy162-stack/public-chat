@@ -1,0 +1,74 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "android-app/**"
+      - ".github/workflows/build-apk.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: android-app
+        run: npm ci
+
+      - name: Restore signing keystore
+        working-directory: android-app
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          cat > keystore.properties <<PROPS
+          storeFile=$GITHUB_WORKSPACE/android-app/release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=privatechat
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: Sync Capacitor
+        working-directory: android-app
+        run: npx cap sync android
+
+      - name: Build release APK
+        working-directory: android-app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Prepare APK
+        run: |
+          cp android-app/android/app/build/outputs/apk/release/app-release.apk PrivateChat.apk
+          ls -la PrivateChat.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrivateChat-apk
+          path: PrivateChat.apk
+
+      - name: Publish to Release (link unduh permanen)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view apk-latest >/dev/null 2>&1 || gh release create apk-latest --title "Private Chat — Android APK" --notes "File APK aplikasi Private Chat (Android). Unduh PrivateChat.apk lalu pasang di HP (izinkan 'instal dari sumber tidak dikenal'). Aplikasi memuat versi web terbaru secara otomatis."
+          gh release upload apk-latest PrivateChat.apk --clobber
