@@ -17,6 +17,9 @@
    - Shift + Enter = New Line
    - Shared Wallpaper
    - Browser Tab Notification
+   - Buzz (manual BUZZ button + broadcast realtime)
+   - Incoming Message Notification (sound + vibrate +
+     browser notification + title flash)
 ========================================================= */
 
 
@@ -137,6 +140,39 @@ let pastedImagePreviewUrl = null;
 
 let selectedUploadFile = null;
 let selectedSticker = null;
+
+/*
+ * BUZZ / NOTIFIKASI
+ */
+const BUZZ_CONTENT =
+  "⚡ BUZZ!";
+
+const BUZZ_COOLDOWN_MS =
+  10000;
+
+let buzzCooldownUntil =
+  0;
+
+let buzzCooldownTimer =
+  null;
+
+let buzzOverlayTimer =
+  null;
+
+let buzzOverlaySenderId =
+  null;
+
+let lastBuzzEffectAt =
+  {};
+
+let buzzAudioContext =
+  null;
+
+let titleFlashTimer =
+  null;
+
+let notificationPermissionAsked =
+  false;
 let stickerPanelView = "all";
 let stickerImportStatus = "";
 let cloudStickers = [];
@@ -314,6 +350,21 @@ const messageInput =
 const sendButton =
   document.getElementById(
     "sendButton"
+  );
+
+const buzzButton =
+  document.getElementById(
+    "buzzButton"
+  );
+
+const buzzOverlay =
+  document.getElementById(
+    "buzzOverlay"
+  );
+
+const buzzOverlayText =
+  document.getElementById(
+    "buzzOverlayText"
   );
 
 const activeReply =
@@ -1595,6 +1646,24 @@ function subscribePresence() {
     }
   );
 
+  /*
+   * Buzz realtime (ephemeral).
+   * Membuat layar penerima langsung bergetar
+   * tanpa menunggu insert database.
+   */
+  presenceChannel.on(
+    "broadcast",
+    {
+      event: "buzz"
+    },
+    payload => {
+
+      handleRemoteBuzz(
+        payload.payload
+      );
+    }
+  );
+
   presenceChannel.subscribe(
     async status => {
 
@@ -2559,6 +2628,27 @@ function handleRealtimeInsert(
   updateSidebarFromMessage(
     message
   );
+
+  /*
+   * Notifikasi pesan masuk:
+   * hanya untuk pesan dari orang lain
+   * yang ditujukan ke saya.
+   * Buzz -> efek buzz penuh.
+   * Pesan biasa -> bunyi + getar +
+   * browser notification bila perlu.
+   */
+  if (
+    message.receiver_id ===
+      currentUser.id
+    &&
+    message.sender_id !==
+      currentUser.id
+  ) {
+
+    notifyIncomingMessage(
+      message
+    );
+  }
 
   const roomIsOpen =
     currentPartner &&
@@ -3565,6 +3655,1219 @@ const isImageUpload =
 
 
 /* =========================================================
+   BUZZ & NOTIFIKASI PESAN MASUK
+
+   Dua jalur agar penerima sadar ada pesan:
+
+   1. BUZZ manual (tombol ⚡ di composer)
+      - Broadcast realtime via presence channel:
+        layar penerima langsung bergetar.
+      - Sekaligus disimpan sebagai pesan type "buzz"
+        di database: kalau penerima sedang offline,
+        buzz tetap tercatat di riwayat chat dan
+        efeknya terpicu saat pesan itu tiba realtime.
+
+   2. Notifikasi otomatis setiap pesan masuk
+      - Bunyi notifikasi (WebAudio, tanpa file eksternal)
+      - Getar HP (navigator.vibrate, bila didukung)
+      - Browser Notification saat tab tidak aktif /
+        room pengirim belum dibuka
+      - Judul tab berkedip
+========================================================= */
+
+function getBuzzAudioContext() {
+
+  if (
+    buzzAudioContext
+  ) {
+    return buzzAudioContext;
+  }
+
+  const AudioCtor =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+  if (
+    !AudioCtor
+  ) {
+    return null;
+  }
+
+  buzzAudioContext =
+    new AudioCtor();
+
+  return buzzAudioContext;
+}
+
+
+function unlockBuzzAudio() {
+
+  const context =
+    getBuzzAudioContext();
+
+  if (
+    context &&
+    context.state ===
+      "suspended"
+  ) {
+
+    context
+      .resume()
+      .catch(
+        () => {}
+      );
+  }
+
+  requestNotificationPermissionOnce();
+}
+
+
+function requestNotificationPermissionOnce() {
+
+  if (
+    notificationPermissionAsked
+  ) {
+    return;
+  }
+
+  notificationPermissionAsked =
+    true;
+
+  if (
+    !("Notification" in window)
+    ||
+    Notification.permission !==
+      "default"
+  ) {
+    return;
+  }
+
+  Notification
+    .requestPermission()
+    .catch(
+      () => {}
+    );
+}
+
+
+/*
+ * Bunyi notifikasi lembut untuk pesan biasa:
+ * dua nada pendek (ding-ding).
+ */
+function playNotificationSound() {
+
+  const context =
+    getBuzzAudioContext();
+
+  if (
+    !context
+  ) {
+    return;
+  }
+
+  if (
+    context.state ===
+      "suspended"
+  ) {
+
+    context
+      .resume()
+      .catch(
+        () => {}
+      );
+  }
+
+  const now =
+    context.currentTime;
+
+  [
+    [880, 0],
+    [1318.5, 0.14]
+  ].forEach(
+    (
+      [
+        frequency,
+        offset
+      ]
+    ) => {
+
+      const oscillator =
+        context.createOscillator();
+
+      const gain =
+        context.createGain();
+
+      oscillator.type =
+        "sine";
+
+      oscillator.frequency.value =
+        frequency;
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        now + offset
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.22,
+        now + offset + 0.02
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        now + offset + 0.28
+      );
+
+      oscillator.connect(
+        gain
+      );
+
+      gain.connect(
+        context.destination
+      );
+
+      oscillator.start(
+        now + offset
+      );
+
+      oscillator.stop(
+        now + offset + 0.3
+      );
+    }
+  );
+}
+
+
+/*
+ * Bunyi BUZZ keras ala Yahoo Messenger:
+ * gelombang sawtooth berdenyut ~1 detik.
+ */
+function playBuzzSound() {
+
+  const context =
+    getBuzzAudioContext();
+
+  if (
+    !context
+  ) {
+    return;
+  }
+
+  if (
+    context.state ===
+      "suspended"
+  ) {
+
+    context
+      .resume()
+      .catch(
+        () => {}
+      );
+  }
+
+  const now =
+    context.currentTime;
+
+  const oscillator =
+    context.createOscillator();
+
+  const gain =
+    context.createGain();
+
+  oscillator.type =
+    "sawtooth";
+
+  oscillator.frequency.value =
+    138;
+
+  gain.gain.setValueAtTime(
+    0.0001,
+    now
+  );
+
+  /*
+   * Pola on-off seperti dering buzz klasik.
+   */
+  const bursts = [
+    [0, 0.16],
+    [0.24, 0.4],
+    [0.48, 0.64],
+    [0.72, 0.92]
+  ];
+
+  bursts.forEach(
+    (
+      [
+        start,
+        end
+      ]
+    ) => {
+
+      gain.gain.setValueAtTime(
+        0.28,
+        now + start
+      );
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        now + end
+      );
+    }
+  );
+
+  /*
+   * Filter agar tidak terlalu cempreng.
+   */
+  const filter =
+    context.createBiquadFilter();
+
+  filter.type =
+    "lowpass";
+
+  filter.frequency.value =
+    900;
+
+  oscillator.connect(
+    filter
+  );
+
+  filter.connect(
+    gain
+  );
+
+  gain.connect(
+    context.destination
+  );
+
+  oscillator.start(
+    now
+  );
+
+  oscillator.stop(
+    now + 1
+  );
+}
+
+
+function vibrateDevice(
+  pattern
+) {
+
+  if (
+    navigator.vibrate
+  ) {
+
+    try {
+
+      navigator.vibrate(
+        pattern
+      );
+
+    } catch {
+
+      /* abaikan */
+    }
+  }
+}
+
+
+/*
+ * Judul tab berkedip beberapa detik,
+ * lalu dikembalikan ke indikator unread biasa.
+ */
+function flashDocumentTitle(
+  text
+) {
+
+  if (
+    titleFlashTimer
+  ) {
+    return;
+  }
+
+  let showAlert =
+    true;
+
+  let ticks =
+    0;
+
+  titleFlashTimer =
+    setInterval(
+      () => {
+
+        ticks++;
+
+        document.title =
+          showAlert
+            ? text
+            : APP_TITLE;
+
+        showAlert =
+          !showAlert;
+
+        if (
+          ticks >= 10
+        ) {
+
+          clearInterval(
+            titleFlashTimer
+          );
+
+          titleFlashTimer =
+            null;
+
+          updateNotificationIndicator();
+        }
+      },
+      500
+    );
+}
+
+
+function showBrowserNotification(
+  title,
+  body,
+  senderId
+) {
+
+  if (
+    !("Notification" in window)
+    ||
+    Notification.permission !==
+      "granted"
+  ) {
+    return;
+  }
+
+  /*
+   * Jangan ganggu kalau user sedang
+   * melihat langsung room pengirim.
+   */
+  const roomOpenWithSender =
+    currentPartner &&
+    currentPartner.id ===
+      senderId
+    &&
+    appScreen
+      .classList
+      .contains(
+        "chat-open"
+      )
+    &&
+    document.visibilityState ===
+      "visible";
+
+  if (
+    roomOpenWithSender
+  ) {
+    return;
+  }
+
+  try {
+
+    const notification =
+      new Notification(
+        title,
+        {
+
+          body,
+
+          tag:
+            "private-chat-" +
+            (
+              senderId ||
+              "message"
+            ),
+
+          renotify:
+            true
+        }
+      );
+
+    notification.onclick =
+      () => {
+
+        window.focus();
+
+        notification.close();
+
+        if (
+          senderId
+        ) {
+
+          openChatByUserId(
+            senderId
+          );
+        }
+      };
+
+  } catch (error) {
+
+    console.log(
+      "Notification:",
+      error
+    );
+  }
+}
+
+
+async function openChatByUserId(
+  userId
+) {
+
+  const profile =
+    profiles.find(
+      item =>
+        item.id ===
+        userId
+    );
+
+  if (
+    !profile
+  ) {
+    return;
+  }
+
+  hideBuzzOverlay();
+
+  if (
+    currentPartner &&
+    currentPartner.id ===
+      userId
+  ) {
+    return;
+  }
+
+  await openChat(
+    profile
+  );
+}
+
+
+/*
+ * Buzz bisa tersimpan sebagai type "buzz",
+ * atau sebagai teks biasa berisi BUZZ_CONTENT
+ * (fallback bila database menolak type baru).
+ */
+function isBuzzMessage(
+  message
+) {
+
+  if (
+    !message
+  ) {
+    return false;
+  }
+
+  if (
+    message.type ===
+    "buzz"
+  ) {
+    return true;
+  }
+
+  return (
+    message.type ===
+    "text"
+    &&
+    String(
+      message.content ||
+      ""
+    ).trim() ===
+    BUZZ_CONTENT
+  );
+}
+
+
+function getSenderName(
+  senderId
+) {
+
+  if (
+    currentPartner &&
+    currentPartner.id ===
+      senderId
+  ) {
+
+    return currentPartner.name ||
+      "Seseorang";
+  }
+
+  const profile =
+    profiles.find(
+      item =>
+        item.id ===
+        senderId
+    );
+
+  return (
+    profile &&
+    profile.name
+  ) ||
+    "Seseorang";
+}
+
+
+/*
+ * Efek buzz penuh di sisi penerima.
+ * Dedupe 4 detik per pengirim: buzz yang sama
+ * bisa tiba lewat broadcast DAN insert database.
+ */
+function triggerBuzzEffect(
+  senderId,
+  senderName
+) {
+
+  const now =
+    Date.now();
+
+  const last =
+    lastBuzzEffectAt[
+      senderId
+    ] || 0;
+
+  if (
+    now - last <
+    4000
+  ) {
+    return;
+  }
+
+  lastBuzzEffectAt[
+    senderId
+  ] =
+    now;
+
+  playBuzzSound();
+
+  vibrateDevice(
+    [
+      200, 80, 200, 80, 450
+    ]
+  );
+
+  flashDocumentTitle(
+    "⚡ BUZZ! dari " +
+    senderName
+  );
+
+  /*
+   * Goyangkan seluruh layar aplikasi.
+   */
+  if (
+    appScreen
+  ) {
+
+    appScreen
+      .classList
+      .remove(
+        "buzz-shaking"
+      );
+
+    void appScreen.offsetWidth;
+
+    appScreen
+      .classList
+      .add(
+        "buzz-shaking"
+      );
+
+    setTimeout(
+      () => {
+
+        appScreen
+          .classList
+          .remove(
+            "buzz-shaking"
+          );
+      },
+      1000
+    );
+  }
+
+  showBuzzOverlay(
+    senderId,
+    senderName
+  );
+
+  showBrowserNotification(
+    "⚡ BUZZ! dari " +
+    senderName,
+    senderName +
+    " nge-buzz kamu! Buka chat sekarang.",
+    senderId
+  );
+}
+
+
+function showBuzzOverlay(
+  senderId,
+  senderName
+) {
+
+  if (
+    !buzzOverlay
+  ) {
+    return;
+  }
+
+  buzzOverlaySenderId =
+    senderId;
+
+  if (
+    buzzOverlayText
+  ) {
+
+    buzzOverlayText.textContent =
+      senderName +
+      " mengirim BUZZ!";
+  }
+
+  buzzOverlay
+    .classList
+    .remove(
+      "hidden"
+    );
+
+  if (
+    buzzOverlayTimer
+  ) {
+
+    clearTimeout(
+      buzzOverlayTimer
+    );
+  }
+
+  buzzOverlayTimer =
+    setTimeout(
+      hideBuzzOverlay,
+      4000
+    );
+}
+
+
+function hideBuzzOverlay() {
+
+  if (
+    buzzOverlayTimer
+  ) {
+
+    clearTimeout(
+      buzzOverlayTimer
+    );
+
+    buzzOverlayTimer =
+      null;
+  }
+
+  buzzOverlaySenderId =
+    null;
+
+  if (
+    buzzOverlay
+  ) {
+
+    buzzOverlay
+      .classList
+      .add(
+        "hidden"
+      );
+  }
+}
+
+
+/*
+ * Dipanggil dari handleRealtimeInsert
+ * untuk setiap pesan masuk dari orang lain.
+ */
+function notifyIncomingMessage(
+  message
+) {
+
+  if (
+    !message
+  ) {
+    return;
+  }
+
+  const senderName =
+    getSenderName(
+      message.sender_id
+    );
+
+  if (
+    isBuzzMessage(
+      message
+    )
+  ) {
+
+    triggerBuzzEffect(
+      message.sender_id,
+      senderName
+    );
+
+    return;
+  }
+
+  /*
+   * Pesan biasa: bunyi lembut selalu,
+   * getar + notifikasi browser hanya bila
+   * user tidak sedang melihat room ini.
+   */
+  const roomOpenWithSender =
+    currentPartner &&
+    currentPartner.id ===
+      message.sender_id
+    &&
+    appScreen
+      .classList
+      .contains(
+        "chat-open"
+      )
+    &&
+    document.visibilityState ===
+      "visible";
+
+  playNotificationSound();
+
+  if (
+    !roomOpenWithSender
+  ) {
+
+    vibrateDevice(
+      [80]
+    );
+
+    flashDocumentTitle(
+      "💬 Pesan baru dari " +
+      senderName
+    );
+
+    showBrowserNotification(
+      "💬 " +
+      senderName,
+      getPreviewText(
+        message
+      ),
+      message.sender_id
+    );
+  }
+}
+
+
+/*
+ * Buzz tiba lewat broadcast presence:
+ * format payload sama seperti typing.
+ */
+function handleRemoteBuzz(
+  payload
+) {
+
+  if (
+    !payload ||
+    !currentUser
+  ) {
+    return;
+  }
+
+  if (
+    payload.receiver_id !==
+    currentUser.id
+  ) {
+    return;
+  }
+
+  if (
+    payload.sender_id ===
+    currentUser.id
+  ) {
+    return;
+  }
+
+  triggerBuzzEffect(
+    payload.sender_id,
+    payload.sender_name ||
+    getSenderName(
+      payload.sender_id
+    )
+  );
+}
+
+
+async function broadcastBuzz() {
+
+  if (
+    !presenceChannel ||
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+  try {
+
+    await presenceChannel
+      .send({
+
+        type:
+          "broadcast",
+
+        event:
+          "buzz",
+
+        payload: {
+
+          sender_id:
+            currentUser.id,
+
+          sender_name:
+            currentProfile
+              ? currentProfile.name
+              : "Seseorang",
+
+          receiver_id:
+            currentPartner.id,
+
+          sent_at:
+            new Date()
+              .toISOString()
+        }
+      });
+
+  } catch (error) {
+
+    console.log(
+      "Buzz broadcast:",
+      error
+    );
+  }
+}
+
+
+function startBuzzCooldown() {
+
+  buzzCooldownUntil =
+    Date.now() +
+    BUZZ_COOLDOWN_MS;
+
+  if (
+    !buzzButton
+  ) {
+    return;
+  }
+
+  buzzButton.disabled =
+    true;
+
+  if (
+    buzzCooldownTimer
+  ) {
+
+    clearInterval(
+      buzzCooldownTimer
+    );
+  }
+
+  buzzCooldownTimer =
+    setInterval(
+      () => {
+
+        const remaining =
+          Math.ceil(
+            (
+              buzzCooldownUntil -
+              Date.now()
+            ) / 1000
+          );
+
+        if (
+          remaining <= 0
+        ) {
+
+          clearInterval(
+            buzzCooldownTimer
+          );
+
+          buzzCooldownTimer =
+            null;
+
+          buzzButton.disabled =
+            false;
+
+          buzzButton.textContent =
+            "⚡";
+
+          buzzButton.title =
+            "Kirim BUZZ! — bunyikan & getarkan layar pasangan";
+
+          return;
+        }
+
+        buzzButton.textContent =
+          String(
+            remaining
+          );
+      },
+      250
+    );
+}
+
+
+/*
+ * Kirim BUZZ ke pasangan chat saat ini:
+ * broadcast instan + pesan persisten type "buzz".
+ */
+async function sendBuzz() {
+
+  if (
+    !currentUser ||
+    !currentPartner
+  ) {
+    return;
+  }
+
+  if (
+    Date.now() <
+    buzzCooldownUntil
+  ) {
+    return;
+  }
+
+  unlockBuzzAudio();
+
+  startBuzzCooldown();
+
+  const partnerSnapshot = {
+    ...currentPartner
+  };
+
+  /*
+   * Jalur cepat: layar penerima langsung
+   * bergetar walau pesan DB belum sampai.
+   */
+  broadcastBuzz();
+
+  const clientId =
+    crypto.randomUUID();
+
+  const optimistic = {
+
+    id:
+      null,
+
+    client_id:
+      clientId,
+
+    sender_id:
+      currentUser.id,
+
+    receiver_id:
+      partnerSnapshot.id,
+
+    type:
+      "buzz",
+
+    content:
+      BUZZ_CONTENT,
+
+    image_url:
+      null,
+
+    reply_to:
+      null,
+
+    created_at:
+      new Date()
+        .toISOString(),
+
+    edited_at:
+      null,
+
+    read_at:
+      null,
+
+    pending:
+      true,
+
+    failed:
+      false
+  };
+
+  pendingMessages.push(
+    optimistic
+  );
+
+  updateSidebarFromMessage(
+    optimistic
+  );
+
+  renderMessages(
+    true
+  );
+
+  let {
+    data,
+    error
+  } =
+    await supabaseClient
+      .from(
+        "messages"
+      )
+      .insert({
+
+        client_id:
+          clientId,
+
+        sender_id:
+          currentUser.id,
+
+        receiver_id:
+          partnerSnapshot.id,
+
+        type:
+          "buzz",
+
+        content:
+          BUZZ_CONTENT,
+
+        image_url:
+          null,
+
+        reply_to:
+          null
+      })
+      .select()
+      .single();
+
+  /*
+   * Fallback: bila kolom type di database
+   * menolak nilai "buzz", simpan sebagai
+   * pesan teks biasa agar buzz tetap tercatat.
+   */
+  if (
+    error
+  ) {
+
+    console.error(
+      "Buzz (type=buzz):",
+      error
+    );
+
+    const retry =
+      await supabaseClient
+        .from(
+          "messages"
+        )
+        .insert({
+
+          client_id:
+            clientId,
+
+          sender_id:
+            currentUser.id,
+
+          receiver_id:
+            partnerSnapshot.id,
+
+          type:
+            "text",
+
+          content:
+            BUZZ_CONTENT,
+
+          image_url:
+            null,
+
+          reply_to:
+            null
+        })
+        .select()
+        .single();
+
+    data =
+      retry.data;
+
+    error =
+      retry.error;
+  }
+
+  if (
+    error
+  ) {
+
+    console.error(
+      "Buzz:",
+      error
+    );
+
+    const failed =
+      pendingMessages.find(
+        item =>
+          item.client_id ===
+          clientId
+      );
+
+    if (
+      failed
+    ) {
+
+      failed.pending =
+        false;
+
+      failed.failed =
+        true;
+    }
+
+    renderMessages(
+      true
+    );
+
+    return;
+  }
+
+  if (
+    data
+    &&
+    currentPartner &&
+    currentPartner.id ===
+    partnerSnapshot.id
+  ) {
+
+    const exists =
+      serverMessages.some(
+        item =>
+          item.id ===
+          data.id
+      );
+
+    if (
+      !exists
+    ) {
+
+      serverMessages.push(
+        data
+      );
+    }
+
+    reconcilePending();
+
+    renderMessages(
+      true
+    );
+  }
+
+  if (
+    data
+  ) {
+
+    updateSidebarFromMessage(
+      data
+    );
+  }
+}
+
+
+/* =========================================================
    MARK READ
 ========================================================= */
 
@@ -4271,6 +5574,13 @@ function renderMessages(
           message.type ===
           "sticker"
             ? " sticker-bubble"
+            : ""
+        ) +
+        (
+          isBuzzMessage(
+            message
+          )
+            ? " buzz-bubble"
             : ""
         );
 
@@ -7279,6 +8589,15 @@ function getPreviewText(
   }
 
   if (
+    isBuzzMessage(
+      message
+    )
+  ) {
+
+    return "⚡ Buzz!";
+  }
+
+  if (
     message.type ===
     "image"
   ) {
@@ -7592,6 +8911,59 @@ sendButton
   .addEventListener(
     "click",
     sendMessage
+  );
+
+
+buzzButton
+  .addEventListener(
+    "click",
+    sendBuzz
+  );
+
+
+buzzOverlay
+  .addEventListener(
+    "click",
+    () => {
+
+      if (
+        buzzOverlaySenderId
+      ) {
+
+        openChatByUserId(
+          buzzOverlaySenderId
+        );
+
+      } else {
+
+        hideBuzzOverlay();
+      }
+    }
+  );
+
+
+/*
+ * AudioContext + izin Notification hanya bisa
+ * diaktifkan setelah ada interaksi user.
+ * Aktifkan sekali di interaksi pertama.
+ */
+document
+  .addEventListener(
+    "pointerdown",
+    unlockBuzzAudio,
+    {
+      once: true
+    }
+  );
+
+
+document
+  .addEventListener(
+    "keydown",
+    unlockBuzzAudio,
+    {
+      once: true
+    }
   );
 
 profilePhotoButton

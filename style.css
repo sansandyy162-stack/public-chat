@@ -1748,3 +1748,151 @@ button {
     0 0 0 2px
     rgba(37, 211, 102, .15);
 }
+
+
+/* =========================================================
+   BUZZ & NOTIFIKASI PESAN MASUK
+========================================================= */
+
+.buzz-button {
+  width: 44px;
+  height: 44px;
+
+  flex: 0 0 44px;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: #ffc107;
+  color: #5f4300;
+
+  font-size: 20px;
+
+  box-shadow: 0 2px 8px rgba(255, 193, 7, .45);
+}
+
+.buzz-button:active {
+  transform: scale(.92);
+}
+
+.buzz-button:disabled {
+  background: #e4e8ed;
+  color: #9aa5b1;
+
+  box-shadow: none;
+
+  cursor: not-allowed;
+}
+
+.message-bubble.buzz-bubble,
+.mine .message-bubble.buzz-bubble,
+.other .message-bubble.buzz-bubble {
+  background: linear-gradient(135deg, #ffc107, #ff9800);
+  border: 2px solid #ff6f00;
+  border-radius: 12px;
+
+  text-align: center;
+}
+
+.buzz-bubble .message-text {
+  color: #4a2c00;
+
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: .5px;
+
+  animation: buzzPulse 0.6s ease-in-out 3;
+}
+
+.buzz-bubble .message-meta {
+  color: rgba(74, 44, 0, .75);
+}
+
+@keyframes buzzPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+.buzz-shaking {
+  animation: buzzShake 0.45s ease-in-out 2;
+}
+
+@keyframes buzzShake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-10px, 2px) rotate(-.4deg); }
+  20% { transform: translate(10px, -2px) rotate(.4deg); }
+  30% { transform: translate(-8px, -3px) rotate(-.3deg); }
+  40% { transform: translate(8px, 3px) rotate(.3deg); }
+  50% { transform: translate(-6px, 1px); }
+  60% { transform: translate(6px, -1px); }
+  70% { transform: translate(-4px, 2px); }
+  80% { transform: translate(4px, -2px); }
+  90% { transform: translate(-2px, 0); }
+}
+
+.buzz-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 200;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(20, 16, 0, .45);
+
+  cursor: pointer;
+}
+
+.buzz-overlay-card {
+  min-width: min(320px, 86vw);
+
+  padding: 28px 24px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 6px;
+
+  border-radius: 18px;
+  border: 3px solid #ff6f00;
+
+  background: linear-gradient(160deg, #fff8e1, #ffe082);
+
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .35);
+
+  text-align: center;
+
+  animation: buzzPulse 0.5s ease-in-out 4;
+}
+
+.buzz-overlay-icon {
+  font-size: 46px;
+  line-height: 1;
+}
+
+.buzz-overlay-card strong {
+  color: #e65100;
+
+  font-size: 34px;
+  letter-spacing: 2px;
+}
+
+.buzz-overlay-card span {
+  color: #4a2c00;
+
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.buzz-overlay-card small {
+  margin-top: 8px;
+
+  color: #8d6e00;
+
+  font-size: 12px;
+}

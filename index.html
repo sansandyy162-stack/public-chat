@@ -539,6 +539,16 @@
           ></textarea>
 
           <button
+            id="buzzButton"
+            class="buzz-button"
+            type="button"
+            aria-label="Kirim BUZZ"
+            title="Kirim BUZZ! — bunyikan & getarkan layar pasangan"
+          >
+            ⚡
+          </button>
+
+          <button
             id="sendButton"
             class="send-button"
             type="button"
@@ -554,6 +564,37 @@
     </main>
 
   </section>
+
+
+  <!-- BUZZ OVERLAY -->
+
+  <div
+    id="buzzOverlay"
+    class="buzz-overlay hidden"
+    role="alert"
+  >
+
+    <div class="buzz-overlay-card">
+
+      <div class="buzz-overlay-icon">
+        ⚡
+      </div>
+
+      <strong>
+        BUZZ!
+      </strong>
+
+      <span id="buzzOverlayText">
+        Seseorang mengirim BUZZ!
+      </span>
+
+      <small>
+        Ketuk untuk membuka chat
+      </small>
+
+    </div>
+
+  </div>
 
 
   <!-- LINK PREVIEW -->
