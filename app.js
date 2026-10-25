@@ -116,6 +116,7 @@ let editingMessage = null;
 let selectedMessage = null;
 
 let realtimeChannel = null;
+let realtimeReconnectTimer = null;
 let presenceChannel = null;
 
 let onlineUsers =
@@ -2430,6 +2431,24 @@ async function closeMobileChat() {
   messagesElement.innerHTML =
     "";
 
+  /*
+   * Balik ke daftar: ambil ulang preview dari server.
+   * Sebelumnya daftar hanya di-render ulang dari data lama di memori,
+   * jadi pesan baru yang masuk saat realtime putus tidak pernah
+   * muncul di preview sampai halaman di-refresh penuh.
+   */
+  try {
+
+    await loadUsers();
+
+  } catch (e) {
+
+    console.error(
+      "Refresh list:",
+      e
+    );
+  }
+
   renderUsers();
 }
 
@@ -2605,6 +2624,43 @@ function subscribeRealtime() {
             "Realtime:",
             status
           );
+
+          /*
+           * Kalau channel realtime putus (HP tidur / pindah jaringan),
+           * daftar chat berhenti update sampai halaman di-refresh.
+           * Sambungkan lagi otomatis setelah jeda singkat.
+           */
+          if (
+            status === "CLOSED" ||
+            status === "TIMED_OUT" ||
+            status === "CHANNEL_ERROR"
+          ) {
+
+            if (
+              currentUser &&
+              !realtimeReconnectTimer
+            ) {
+
+              realtimeReconnectTimer =
+                setTimeout(
+                  () => {
+
+                    realtimeReconnectTimer =
+                      null;
+
+                    if (currentUser) {
+
+                      subscribeRealtime();
+
+                    }
+
+                  },
+                  3000
+                );
+            }
+
+          }
+
         }
       );
 }
